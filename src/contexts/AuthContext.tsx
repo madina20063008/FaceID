@@ -1,6 +1,7 @@
+// contexts/AuthContext.tsx - Simplified version without checkPhoneNumber
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiService, User, LoginRequest } from '../lib/api';
+import { apiService, LoginRequest, LoginResponse, User } from '../lib/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -19,51 +20,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = apiService.getAccessToken();
-    if (token) {
-      loadUser();
-    } else {
+    const initAuth = async () => {
+      const token = apiService.getAccessToken();
+      console.log('🔄 Auth initialization - Token exists:', !!token);
+      
+      if (token) {
+        try {
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
+          console.log('✅ User loaded:', currentUser.full_name);
+          
+          if (window.location.pathname === '/login') {
+            navigate('/dashboard');
+          }
+        } catch (error: any) {
+          console.error('❌ Failed to load user:', error);
+          apiService.clearTokens();
+          
+          if (window.location.pathname !== '/login') {
+            toast.error('Sessiya tugadi. Iltimos, qaytadan kiring.');
+            navigate('/login');
+          }
+        }
+      }
       setIsLoading(false);
-    }
-  }, []);
+    };
 
-  const loadUser = async () => {
-    try {
-      // For demonstration, use mock data
-      const mockUser: User = {
-        id: 1,
-        full_name: 'Admin User',
-        phone_number: '+998901234567',
-        role: 'admin',
-        is_active: true,
-      };
-      setUser(mockUser);
-    } catch (error) {
-      console.error('Failed to load user:', error);
-      apiService.clearAccessToken();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    initAuth();
+  }, [navigate]);
 
   const login = async (credentials: LoginRequest) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
+      console.log('🚀 Login attempt for phone:', credentials.phone_number);
       
-      // Mock login - in production, call the real API
-      // const response = await apiService.login(credentials);
-      // apiService.setAccessToken(response.data.access);
+      const response: LoginResponse = await apiService.login(credentials);
       
-      // For demonstration purposes
-      apiService.setAccessToken('mock_token_' + Date.now());
+      console.log('✅ Login API success, fetching user...');
       
-      await loadUser();
-      toast.success('Muvaffaqiyatli kirdingiz!');
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Login failed:', error);
-      toast.error('Telefon raqami yoki parol noto\'g\'ri');
+      try {
+        const currentUser = await apiService.getCurrentUser();
+        setUser(currentUser);
+        console.log('👤 User data loaded:', currentUser.full_name);
+        toast.success('Muvaffaqiyatli kirdingiz!');
+        navigate('/dashboard');
+      } catch (userError) {
+        console.error('⚠️ User fetch failed but login succeeded');
+        // Still redirect since we have token
+        toast.success('Kirish muvaffaqiyatli!');
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('💥 Login failed:', error);
+      
+      // Show appropriate error message
+      if (error.message.includes('Telefon raqami yoki parol')) {
+        toast.error('Telefon raqami yoki parol noto\'g\'ri');
+      } else if (error.message.includes('Internet aloqasi')) {
+        toast.error('Internet aloqasi yo\'q');
+      } else {
+        toast.error(error.message || 'Kirishda xatolik');
+      }
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -71,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    apiService.clearAccessToken();
+    console.log('👋 Logging out');
+    apiService.clearTokens();
     setUser(null);
     toast.success('Tizimdan chiqdingiz');
     navigate('/login');

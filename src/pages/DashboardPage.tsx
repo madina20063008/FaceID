@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { mockDailyAttendance, DailyAttendance } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../app/components/ui/card';
-import { Button } from '../app/components/ui/button';
 import { Input } from '../app/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../app/components/ui/avatar';
 import { Badge } from '../app/components/ui/badge';
