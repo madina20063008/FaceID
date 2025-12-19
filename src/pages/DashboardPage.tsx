@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiService, DailyAttendance, formatDate } from '../lib/api';
+import { apiService, DailyAttendance, formatDate, EventSyncResponse } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../app/components/ui/card';
 import { Input } from '../app/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../app/components/ui/avatar';
@@ -20,7 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../app/components/ui/select';
-import { Users, UserCheck, Clock, UserX, Calendar, Search, RefreshCw } from 'lucide-react';
+import { 
+  Users, UserCheck, Clock, UserX, Calendar, Search, RefreshCw,
+  AlertCircle, Database, Download, ArrowDownUp
+} from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
 
@@ -42,7 +45,6 @@ export function DashboardPage() {
       setIsLoading(true);
       console.log('📊 Loading attendance for date:', date || selectedDate);
       
-      // Format date for API call
       const dateToLoad = date || selectedDate;
       
       try {
@@ -70,24 +72,86 @@ export function DashboardPage() {
     }
   };
 
-  // Refresh attendance data
+  // 🔄 REFRESH WITH SYNC FUNCTIONALITY (exactly like EmployeesPage)
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await loadAttendance(selectedDate);
-      toast.success('Davomat ma\'lumotlari yangilandi');
-    } catch (error) {
-      console.error('Refresh error:', error);
-      toast.error('Yangilashda xatolik yuz berdi');
+      console.log('🔄 Starting refresh process...');
+
+      if (useMockData) {
+        // In mock mode, just fetch attendance
+        await loadAttendance(selectedDate);
+        toast.success("Davomat ma'lumotlari yangilandi (namuna rejim)");
+      } else {
+        try {
+          console.log('🔄 Syncing events with devices...');
+
+          // Step 1: Sync events with devices (TODAY only)
+          const syncResult = await apiService.syncEvents(
+            selectedDate, // fromDate = selectedDate
+            selectedDate  // toDate = selectedDate
+          );
+          console.log('✅ Sync result:', syncResult);
+
+          if (syncResult.success) {
+            let successMessage = `Tadbirlar sinxronizatsiya qilindi`;
+
+            // Add sync statistics to the message
+            const statsMessages = [];
+            if (syncResult.synced_devices > 0) {
+              statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
+            }
+            if (syncResult.synced_events > 0) {
+              statsMessages.push(`${syncResult.synced_events} ta yangi tadbir`);
+            }
+
+            if (statsMessages.length > 0) {
+              successMessage += `: ${statsMessages.join(", ")}`;
+            }
+
+            toast.success(successMessage);
+          } else {
+            toast.warning(
+              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas"
+            );
+          }
+
+          // Step 2: Fetch updated attendance list
+          console.log('📥 Fetching updated attendance data...');
+          await loadAttendance(selectedDate);
+        } catch (syncError: any) {
+          console.error('❌ Sync failed:', syncError);
+
+          // Try to fetch attendance even if sync fails
+          console.log('🔄 Attempting to fetch attendance without sync...');
+          try {
+            await loadAttendance(selectedDate);
+            toast.warning(
+              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi"
+            );
+          } catch (fetchError) {
+            toast.error("Ikkala operatsiya ham amalga oshirilmadi");
+            throw syncError; // Re-throw the original error
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ Refresh failed:', error);
+
+      // User-friendly error messages
+      if (error.message.includes("Failed to fetch")) {
+        toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
+      } else if (error.status === 401) {
+        toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
+      } else if (error.status === 403) {
+        toast.error("Bu amalni bajarish uchun ruxsat yo'q");
+      } else {
+        toast.error("Yangilashda xatolik yuz berdi");
+      }
     } finally {
       setIsRefreshing(false);
     }
   };
-
-  // Initial load
-  useEffect(() => {
-    loadAttendance(selectedDate);
-  }, []);
 
   // Date change handler
   const handleDateChange = (date: string) => {
@@ -100,16 +164,13 @@ export function DashboardPage() {
     if (!attendance) return [];
 
     return attendance.employees.filter((emp) => {
-      // Search filter
       const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
       
-      // Status filter logic
       const matchesStatus = (() => {
         if (statusFilter === 'all') return true;
         if (statusFilter === 'came') return emp.kirish !== null;
         if (statusFilter === 'late') {
-          // "late" maydoni "0:00" dan katta bo'lsa, kechikkan deb hisoblaymiz
           return emp.late !== '0:00' && emp.late !== '0';
         }
         if (statusFilter === 'absent') return emp.kirish === null;
@@ -175,6 +236,11 @@ export function DashboardPage() {
     return <span className="font-medium">{time}</span>;
   };
 
+  // Initial load
+  useEffect(() => {
+    loadAttendance(selectedDate);
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -185,21 +251,35 @@ export function DashboardPage() {
             Kunlik davomat ma'lumotlari
             {useMockData && (
               <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                <AlertCircle className="w-3 h-3 mr-1" />
                 Namuna rejim
               </span>
             )}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={isRefreshing || isLoading}
-        >
-          <RefreshCw
-            className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-          />
-          {isRefreshing ? "Yangilanmoqda..." : "Yangilash"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            {isRefreshing ? "Sinxronizatsiya..." : "Sinxronizatsiyalash"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Open sync modal for custom date range
+              toast.info("Boshqa sana oralig'i uchun iltimos, sana tanlang");
+            }}
+            title="Boshqa sanalar uchun tadbirlarni yuklash"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Qurilmalardan yuklash
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -247,7 +327,7 @@ export function DashboardPage() {
                   value={selectedDate}
                   onChange={(e) => handleDateChange(e.target.value)}
                   className="w-full sm:w-auto"
-                  disabled={isLoading}
+                  disabled={isLoading || isRefreshing}
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
@@ -263,13 +343,13 @@ export function DashboardPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
-                disabled={isLoading}
+                disabled={isLoading || isRefreshing}
               />
             </div>
             <Select 
               value={statusFilter} 
               onValueChange={setStatusFilter}
-              disabled={isLoading}
+              disabled={isLoading || isRefreshing}
             >
               <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Holat" />
@@ -284,10 +364,12 @@ export function DashboardPage() {
           </div>
 
           <div className="rounded-md border">
-            {isLoading ? (
+            {isLoading || isRefreshing ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-2 text-gray-500">Davomat ma'lumotlari yuklanmoqda...</p>
+                <p className="mt-2 text-gray-500">
+                  {isRefreshing ? "Tadbirlar sinxronizatsiya qilinmoqda..." : "Davomat ma'lumotlari yuklanmoqda..."}
+                </p>
               </div>
             ) : !attendance ? (
               <div className="text-center py-8">
@@ -296,6 +378,7 @@ export function DashboardPage() {
                   variant="outline" 
                   onClick={() => loadAttendance(selectedDate)}
                   className="mt-2"
+                  disabled={isRefreshing}
                 >
                   Qayta yuklash
                 </Button>
@@ -307,6 +390,17 @@ export function DashboardPage() {
                     ? "Qidiruv natijasi topilmadi"
                     : "Bu sana uchun davomat ma'lumotlari topilmadi"}
                 </p>
+                {!searchQuery && statusFilter === 'all' && (
+                  <Button 
+                    variant="outline"
+                    onClick={handleRefresh}
+                    className="mt-2"
+                    disabled={isRefreshing}
+                  >
+                    <ArrowDownUp className="mr-2 h-4 w-4" />
+                    Qurilmalardan tadbirlarni yuklash
+                  </Button>
+                )}
               </div>
             ) : (
               <Table>
@@ -330,7 +424,6 @@ export function DashboardPage() {
                               src={employee.face} 
                               alt={employee.name}
                               onError={(e) => {
-                                // Agar rasm yuklanmasa, default fallback
                                 e.currentTarget.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop';
                               }}
                             />
@@ -370,6 +463,21 @@ export function DashboardPage() {
                 </TableBody>
               </Table>
             )}
+          </div>
+          
+          {/* Data source info */}
+          <div className="mt-4 text-sm text-gray-500 flex items-center justify-between">
+            <div className="flex items-center">
+              <Database className="h-4 w-4 mr-2" />
+              <span>
+                {useMockData 
+                  ? "Namuna ma'lumotlar ishlatilmoqda" 
+                  : "Ma'lumotlar bazasidan yuklandi"}
+              </span>
+            </div>
+            <div className="text-xs">
+              Sana: {selectedDate}
+            </div>
           </div>
         </CardContent>
       </Card>

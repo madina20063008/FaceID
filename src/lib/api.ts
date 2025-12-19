@@ -102,6 +102,15 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+export interface EventSyncResponse {
+  success: boolean;
+  synced_devices: number;
+  synced_events: number;
+  from_date?: string;
+  to_date?: string;
+  message?: string;
+  error?: string;
+}
 
 // Helper function to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
@@ -147,7 +156,70 @@ class ApiService {
     }
     return this.refreshTokenString;
   }
-
+// lib/api.ts - syncEvents metodini yangilang
+async syncEvents(fromDate?: string, toDate?: string): Promise<EventSyncResponse> {
+  console.log('🔄 Syncing events from devices...');
+  console.log('📅 Date range:', { fromDate, toDate });
+  
+  try {
+    // Build query parameters - EXACTLY like syncEmployees
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    if (fromDate) {
+      params.append('from_date', fromDate);
+    }
+    
+    if (toDate) {
+      params.append('to_date', toDate);
+    }
+    
+    // Send POST request to sync events - EXACTLY like syncEmployees
+    const endpoint = `/event/event-sync/?${params.toString()}`;
+    console.log('🌐 Making sync request to:', endpoint);
+    
+    const response = await this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({}), // Empty body, parameters in query
+    });
+    
+    console.log('✅ Events sync API response:', response);
+    
+    // Format response to match EventSyncResponse interface
+    return {
+      success: response.success !== false,
+      synced_devices: response.synced_devices || 0,
+      synced_events: response.synced_events || 0,
+      from_date: response.from_date || fromDate,
+      to_date: response.to_date || toDate,
+      message: response.message,
+      error: response.error,
+    };
+  } catch (error: any) {
+    console.error('❌ Failed to sync events:', error);
+    
+    // More detailed error handling
+    let errorMessage = 'Tadbirlarni sinxronizatsiya qilishda xatolik';
+    
+    if (error.status === 400) {
+      errorMessage = 'Noto\'g\'ri so\'rov formati';
+    } else if (error.status === 401) {
+      errorMessage = 'Kirish huquqi yo\'q';
+    } else if (error.status === 403) {
+      errorMessage = 'Ruxsat yo\'q';
+    } else if (error.status === 503) {
+      errorMessage = 'Server ishlamayapti';
+    } else if (error.message?.includes('Failed to fetch')) {
+      errorMessage = 'Internet aloqasi yo\'q';
+    }
+    
+    // Throw new error with user-friendly message
+    const userError = new Error(errorMessage);
+    (userError as any).status = error.status;
+    (userError as any).originalError = error;
+    throw userError;
+  }
+}
   // Send phone WITH +998 prefix
   private formatPhoneForServer(phone: string): string {
     console.log('📱 Formatting phone for server. Original:', phone);
