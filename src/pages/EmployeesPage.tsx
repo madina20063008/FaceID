@@ -606,7 +606,7 @@ const openView = async (employee: Employee) => {
             <RefreshCw
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
-            {isRefreshing ? "Sinxronizatsiya..." : "Yangilash"}
+            {isRefreshing ? "Sinxronizatsiya..." : "Sinxronizatsiyalash"}
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
