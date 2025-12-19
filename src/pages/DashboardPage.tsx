@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { mockDailyAttendance, DailyAttendance } from '../lib/api';
+import { apiService, DailyAttendance, formatDate } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../app/components/ui/card';
 import { Input } from '../app/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../app/components/ui/avatar';
 import { Badge } from '../app/components/ui/badge';
+import { Button } from '../app/components/ui/button';
 import {
   Table,
   TableBody,
@@ -20,28 +20,110 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../app/components/ui/select';
-import { Users, UserCheck, Clock, UserX, Calendar, Search } from 'lucide-react';
+import { Users, UserCheck, Clock, UserX, Calendar, Search, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 
 export function DashboardPage() {
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [attendance, setAttendance] = useState<DailyAttendance>(mockDailyAttendance);
+  // Format today's date as YYYY-MM-DD
+  const formattedToday = formatDate(new Date());
+  
+  const [selectedDate, setSelectedDate] = useState(formattedToday);
+  const [attendance, setAttendance] = useState<DailyAttendance | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [useMockData, setUseMockData] = useState(false);
 
+  // Load attendance data
+  const loadAttendance = async (date?: string) => {
+    try {
+      setIsLoading(true);
+      console.log('📊 Loading attendance for date:', date || selectedDate);
+      
+      // Format date for API call
+      const dateToLoad = date || selectedDate;
+      
+      try {
+        const attendanceData = await apiService.getDailyAttendance(dateToLoad);
+        setAttendance(attendanceData);
+        
+        // Check if using mock data
+        if (attendanceData.employees.length > 0 && 
+            attendanceData.employees[0]?.employee_no?.startsWith('EMP')) {
+          setUseMockData(true);
+        } else {
+          setUseMockData(false);
+        }
+        
+        toast.success(`Davomat ma'lumotlari yuklandi: ${attendanceData.stats.came} ta kelgan`);
+      } catch (apiError) {
+        console.error('API error:', apiError);
+        toast.warning("API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda.");
+      }
+    } catch (error) {
+      console.error('❌ Failed to load attendance:', error);
+      toast.error('Davomat ma\'lumotlarini yuklab bo\'lmadi');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh attendance data
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await loadAttendance(selectedDate);
+      toast.success('Davomat ma\'lumotlari yangilandi');
+    } catch (error) {
+      console.error('Refresh error:', error);
+      toast.error('Yangilashda xatolik yuz berdi');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
-    // Load attendance data for selected date
-    setAttendance(mockDailyAttendance);
-  }, [selectedDate]);
+    loadAttendance(selectedDate);
+  }, []);
 
-  const filteredEmployees = attendance.employees.filter((emp) => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || emp.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Date change handler
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+    loadAttendance(date);
+  };
 
-  const stats = [
+  // Filter employees based on status
+  const getFilteredEmployees = () => {
+    if (!attendance) return [];
+
+    return attendance.employees.filter((emp) => {
+      // Search filter
+      const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Status filter logic
+      const matchesStatus = (() => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'came') return emp.kirish !== null;
+        if (statusFilter === 'late') {
+          // "late" maydoni "0:00" dan katta bo'lsa, kechikkan deb hisoblaymiz
+          return emp.late !== '0:00' && emp.late !== '0';
+        }
+        if (statusFilter === 'absent') return emp.kirish === null;
+        return true;
+      })();
+
+      return matchesSearch && matchesStatus;
+    });
+  };
+
+  const filteredEmployees = getFilteredEmployees();
+
+  // Calculate stats
+  const stats = attendance ? [
     {
       title: 'Jami hodimlar',
       value: attendance.stats.total,
@@ -74,26 +156,50 @@ export function DashboardPage() {
       textColor: 'text-red-600',
       bgColor: 'bg-red-50 dark:bg-red-900/20',
     },
-  ];
+  ] : [];
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      came: { label: 'Keldi', variant: 'default' as const },
-      late: { label: 'Kechikdi', variant: 'destructive' as const },
-      absent: { label: 'Kelmadi', variant: 'secondary' as const },
-    };
-    const config = variants[status as keyof typeof variants] || variants.absent;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+  // Get status badge
+  const getStatusBadge = (employee: DailyAttendance['employees'][0]) => {
+    if (employee.kirish === null) {
+      return <Badge variant="secondary">Kelmadi</Badge>;
+    } else if (employee.late !== '0:00' && employee.late !== '0') {
+      return <Badge variant="destructive">Kechikdi</Badge>;
+    } else {
+      return <Badge variant="default">Keldi</Badge>;
+    }
+  };
+
+  // Format time display
+  const formatTime = (time: string | null) => {
+    if (!time) return <span className="text-gray-400">—</span>;
+    return <span className="font-medium">{time}</span>;
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Kunlik davomat ma'lumotlari
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Kunlik davomat ma'lumotlari
+            {useMockData && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                Namuna rejim
+              </span>
+            )}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={isRefreshing || isLoading}
+        >
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+          />
+          {isRefreshing ? "Yangilanmoqda..." : "Yangilash"}
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -139,8 +245,9 @@ export function DashboardPage() {
                 <Input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   className="w-full sm:w-auto"
+                  disabled={isLoading}
                 />
                 <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
@@ -156,9 +263,14 @@ export function DashboardPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
+                disabled={isLoading}
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select 
+              value={statusFilter} 
+              onValueChange={setStatusFilter}
+              disabled={isLoading}
+            >
               <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Holat" />
               </SelectTrigger>
@@ -172,48 +284,92 @@ export function DashboardPage() {
           </div>
 
           <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Hodim</TableHead>
-                  <TableHead>Raqami</TableHead>
-                  <TableHead>Kirish</TableHead>
-                  <TableHead>Chiqish</TableHead>
-                  <TableHead>Holat</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-2 text-gray-500">Davomat ma'lumotlari yuklanmoqda...</p>
+              </div>
+            ) : !attendance ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Ma'lumotlar topilmadi</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => loadAttendance(selectedDate)}
+                  className="mt-2"
+                >
+                  Qayta yuklash
+                </Button>
+              </div>
+            ) : filteredEmployees.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">
+                  {searchQuery || statusFilter !== 'all'
+                    ? "Qidiruv natijasi topilmadi"
+                    : "Bu sana uchun davomat ma'lumotlari topilmadi"}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                      Ma'lumot topilmadi
-                    </TableCell>
+                    <TableHead>Hodim</TableHead>
+                    <TableHead>Raqami</TableHead>
+                    <TableHead>Kirish</TableHead>
+                    <TableHead>Chiqish</TableHead>
+                    <TableHead>Kechikish</TableHead>
+                    <TableHead>Holat</TableHead>
                   </TableRow>
-                ) : (
-                  filteredEmployees.map((employee) => (
+                </TableHeader>
+                <TableBody>
+                  {filteredEmployees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={employee.photo} alt={employee.name} />
-                            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage 
+                              src={employee.face} 
+                              alt={employee.name}
+                              onError={(e) => {
+                                // Agar rasm yuklanmasa, default fallback
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop';
+                              }}
+                            />
+                            <AvatarFallback>
+                              {employee.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{employee.name}</span>
+                          <div>
+                            <span className="font-medium block">
+                              {employee.name}
+                            </span>
+                            {employee.id && (
+                              <span className="text-xs text-gray-500">
+                                ID: {employee.id}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell>{employee.employee_no}</TableCell>
-                      <TableCell>
-                        {employee.entry_time || <span className="text-gray-400">—</span>}
+                      <TableCell className="font-mono">
+                        {employee.employee_no}
                       </TableCell>
                       <TableCell>
-                        {employee.exit_time || <span className="text-gray-400">—</span>}
+                        {formatTime(employee.kirish)}
                       </TableCell>
-                      <TableCell>{getStatusBadge(employee.status)}</TableCell>
+                      <TableCell>
+                        {formatTime(employee.chiqish)}
+                      </TableCell>
+                      <TableCell className={employee.late !== '0:00' && employee.late !== '0' ? 'text-red-600 font-medium' : 'text-green-600'}>
+                        {employee.late}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(employee)}
+                      </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,3 @@
-
 // lib/api.ts - COMPLETE WITH ALL FIXES
 const BASE_URL = 'https://45.55.129.34';
 
@@ -62,11 +61,10 @@ export interface DailyAttendance {
     id: number;
     employee_no: string;
     name: string;
-    photo: string;
-    entry_time: string;
-    exit_time: string;
-    late: boolean;
-    status: 'came' | 'late' | 'absent';
+    kirish: string | null;
+    chiqish: string | null;
+    late: string;  // "0:00" formatida
+    face: string;  // URL
   }>;
   stats: {
     total: number;
@@ -104,6 +102,14 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+// Helper function to format date as YYYY-MM-DD
+export const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // API Service
 class ApiService {
@@ -172,11 +178,11 @@ class ApiService {
   ): Promise<T> {
     const token = this.getAccessToken();
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...options.headers,
-    };
+    const headers: Record<string, string> = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  ...(options.headers as Record<string, string> || {}),
+};
 
     // Use Bearer token for all authenticated requests
     if (token && !endpoint.includes('/login') && !endpoint.includes('/auth/refresh')) {
@@ -452,32 +458,32 @@ class ApiService {
     }
   }
 
-  /// NEW: Get employee by ID with user_id=2
-async getEmployeeById(id: number): Promise<Employee> {
-  console.log(`👤 Fetching employee with ID: ${id}`);
-  
-  try {
-    // Add user_id parameter like your other endpoints
-    const endpoint = `/person/employee-detail/${id}/?user_id=${this.USER_ID}`;
-    console.log('🌐 Making request to:', endpoint);
+  // NEW: Get employee by ID with user_id=2
+  async getEmployeeById(id: number): Promise<Employee> {
+    console.log(`👤 Fetching employee with ID: ${id}`);
     
-    const employee = await this.request<Employee>(endpoint);
-    console.log('✅ Employee loaded:', employee.name);
-    console.log('📊 Full employee data:', employee);
-    return employee;
-  } catch (error) {
-    console.error(`❌ Failed to load employee ${id}:`, error);
-    
-    // More specific error handling
-    if ((error as any).status === 404) {
-      throw new Error(`Hodim topilmadi (ID: ${id})`);
-    } else if ((error as any).status === 403) {
-      throw new Error('Bu hodimni ko\'rish uchun ruxsat yo\'q');
+    try {
+      // Add user_id parameter like your other endpoints
+      const endpoint = `/person/employee-detail/${id}/?user_id=${this.USER_ID}`;
+      console.log('🌐 Making request to:', endpoint);
+      
+      const employee = await this.request<Employee>(endpoint);
+      console.log('✅ Employee loaded:', employee.name);
+      console.log('📊 Full employee data:', employee);
+      return employee;
+    } catch (error) {
+      console.error(`❌ Failed to load employee ${id}:`, error);
+      
+      // More specific error handling
+      if ((error as any).status === 404) {
+        throw new Error(`Hodim topilmadi (ID: ${id})`);
+      } else if ((error as any).status === 403) {
+        throw new Error('Bu hodimni ko\'rish uchun ruxsat yo\'q');
+      }
+      
+      throw error;
     }
-    
-    throw error;
   }
-}
 
   // NEW: Search employees with user_id=2
   async searchEmployees(query: string): Promise<Employee[]> {
@@ -507,33 +513,35 @@ async getEmployeeById(id: number): Promise<Employee> {
       throw error;
     }
   }
-// Sync employees with devices
-async syncEmployees(): Promise<{
-  success: boolean;
-  synced_devices: number;
-  added: number;
-  deleted: number;
-  message?: string;
-}> {
-  console.log('🔄 Syncing employees with devices...');
-  
-  try {
-    // Send POST request to sync endpoint with user_id parameter
-    const endpoint = `/person/sync-employees/?user_id=${this.USER_ID}`;
-    console.log('🌐 Making sync request to:', endpoint);
+
+  // Sync employees with devices
+  async syncEmployees(): Promise<{
+    success: boolean;
+    synced_devices: number;
+    added: number;
+    deleted: number;
+    message?: string;
+  }> {
+    console.log('🔄 Syncing employees with devices...');
     
-    const response = await this.request<any>(endpoint, {
-      method: 'POST',
-      body: JSON.stringify({}), // Empty body, user_id is in query params
-    });
-    
-    console.log('✅ Employees synced successfully:', response);
-    return response;
-  } catch (error) {
-    console.error('❌ Failed to sync employees:', error);
-    throw error;
+    try {
+      // Send POST request to sync endpoint with user_id parameter
+      const endpoint = `/person/sync-employees/?user_id=${this.USER_ID}`;
+      console.log('🌐 Making sync request to:', endpoint);
+      
+      const response = await this.request<any>(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({}), // Empty body, user_id is in query params
+      });
+      
+      console.log('✅ Employees synced successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to sync employees:', error);
+      throw error;
+    }
   }
-}
+
   // Get all employees with user_id=2
   async getEmployees(): Promise<Employee[]> {
     console.log('👥 Fetching all employees...');
@@ -566,157 +574,157 @@ async syncEmployees(): Promise<{
     }
   }
 
-async createEmployee(data: CreateEmployeeRequest): Promise<Employee> {
-  console.log('➕ Creating new employee...');
-  
-  // 🔍 DEBUG: Log incoming data
-  console.log('📥 Incoming data to createEmployee:', data);
-  
-  // Prepare the data - ALWAYS include required fields
-  const employeeData: any = {
-    device_id: data.device_id || 1, // Use provided or default to 1
-    name: data.name,
-    user_type: data.user_type || 'normal',
-    begin_time: data.begin_time || new Date().toISOString(),
-    end_time: data.end_time || new Date().toISOString(),
-    door_right: data.door_right || '1',
-    position: data.position || '',           // ✅ ALWAYS send (even if empty)
-    phone_number: data.phone_number,         // ✅ ALWAYS send (required)
-    user_id: this.USER_ID,
-    salary: data.salary || 0,                // ✅ ALWAYS send (even if 0)
-    fine: data.fine || 0,                    // ✅ ALWAYS send (even if 0)
-  };
-  
-  // ✅ ALWAYS send these optional fields (send empty string if undefined)
-  employeeData.description = data.description || '';
-  employeeData.employment = data.employment || '';
-  employeeData.employee_no = data.employee_no || '';
-  
-  // ✅ Handle foreign key fields: only send if they're valid IDs (> 0)
-  // For null/undefined/0, don't include them (backend should handle as null)
-  if (data.department !== undefined && data.department !== null && data.department > 0) {
-    console.log(`✅ Including department: ${data.department}`);
-    employeeData.department = data.department;
-  } else {
-    console.log(`❌ Skipping department (value: ${data.department})`);
+  async createEmployee(data: CreateEmployeeRequest): Promise<Employee> {
+    console.log('➕ Creating new employee...');
+    
+    // 🔍 DEBUG: Log incoming data
+    console.log('📥 Incoming data to createEmployee:', data);
+    
+    // Prepare the data - ALWAYS include required fields
+    const employeeData: any = {
+      device_id: data.device_id || 1, // Use provided or default to 1
+      name: data.name,
+      user_type: data.user_type || 'normal',
+      begin_time: data.begin_time || new Date().toISOString(),
+      end_time: data.end_time || new Date().toISOString(),
+      door_right: data.door_right || '1',
+      position: data.position || '',           // ✅ ALWAYS send (even if empty)
+      phone_number: data.phone_number,         // ✅ ALWAYS send (required)
+      user_id: this.USER_ID,
+      salary: data.salary || 0,                // ✅ ALWAYS send (even if 0)
+      fine: data.fine || 0,                    // ✅ ALWAYS send (even if 0)
+    };
+    
+    // ✅ ALWAYS send these optional fields (send empty string if undefined)
+    employeeData.description = data.description || '';
+    employeeData.employment = data.employment || '';
+    employeeData.employee_no = data.employee_no || '';
+    
+    // ✅ Handle foreign key fields: only send if they're valid IDs (> 0)
+    // For null/undefined/0, don't include them (backend should handle as null)
+    if (data.department !== undefined && data.department !== null && data.department > 0) {
+      console.log(`✅ Including department: ${data.department}`);
+      employeeData.department = data.department;
+    } else {
+      console.log(`❌ Skipping department (value: ${data.department})`);
+    }
+    
+    if (data.shift !== undefined && data.shift !== null && data.shift > 0) {
+      console.log(`✅ Including shift: ${data.shift}`);
+      employeeData.shift = data.shift;
+    } else {
+      console.log(`❌ Skipping shift (value: ${data.shift})`);
+    }
+    
+    if (data.branch !== undefined && data.branch !== null && data.branch > 0) {
+      console.log(`✅ Including branch: ${data.branch}`);
+      employeeData.branch = data.branch;
+    } else {
+      console.log(`❌ Skipping branch (value: ${data.branch})`);
+    }
+    
+    if (data.break_time !== undefined && data.break_time !== null && data.break_time > 0) {
+      console.log(`✅ Including break_time: ${data.break_time}`);
+      employeeData.break_time = data.break_time;
+    } else {
+      console.log(`❌ Skipping break_time (value: ${data.break_time})`);
+    }
+    
+    if (data.work_day !== undefined && data.work_day !== null && data.work_day > 0) {
+      console.log(`✅ Including work_day: ${data.work_day}`);
+      employeeData.work_day = data.work_day;
+    } else {
+      console.log(`❌ Skipping work_day (value: ${data.work_day})`);
+    }
+    
+    if (data.day_off !== undefined && data.day_off !== null && data.day_off > 0) {
+      console.log(`✅ Including day_off: ${data.day_off}`);
+      employeeData.day_off = data.day_off;
+    } else {
+      console.log(`❌ Skipping day_off (value: ${data.day_off})`);
+    }
+    
+    console.log('📦 FINAL - Sending CREATE employee data:', employeeData);
+    
+    try {
+      const response = await this.request<Employee>('/person/create/', {
+        method: 'POST',
+        body: JSON.stringify(employeeData),
+      });
+      console.log('✅ Employee created successfully:', response);
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to create employee:', error);
+      console.error('❌ Request payload was:', employeeData);
+      throw error;
+    }
   }
-  
-  if (data.shift !== undefined && data.shift !== null && data.shift > 0) {
-    console.log(`✅ Including shift: ${data.shift}`);
-    employeeData.shift = data.shift;
-  } else {
-    console.log(`❌ Skipping shift (value: ${data.shift})`);
-  }
-  
-  if (data.branch !== undefined && data.branch !== null && data.branch > 0) {
-    console.log(`✅ Including branch: ${data.branch}`);
-    employeeData.branch = data.branch;
-  } else {
-    console.log(`❌ Skipping branch (value: ${data.branch})`);
-  }
-  
-  if (data.break_time !== undefined && data.break_time !== null && data.break_time > 0) {
-    console.log(`✅ Including break_time: ${data.break_time}`);
-    employeeData.break_time = data.break_time;
-  } else {
-    console.log(`❌ Skipping break_time (value: ${data.break_time})`);
-  }
-  
-  if (data.work_day !== undefined && data.work_day !== null && data.work_day > 0) {
-    console.log(`✅ Including work_day: ${data.work_day}`);
-    employeeData.work_day = data.work_day;
-  } else {
-    console.log(`❌ Skipping work_day (value: ${data.work_day})`);
-  }
-  
-  if (data.day_off !== undefined && data.day_off !== null && data.day_off > 0) {
-    console.log(`✅ Including day_off: ${data.day_off}`);
-    employeeData.day_off = data.day_off;
-  } else {
-    console.log(`❌ Skipping day_off (value: ${data.day_off})`);
-  }
-  
-  console.log('📦 FINAL - Sending CREATE employee data:', employeeData);
-  
-  try {
-    const response = await this.request<Employee>('/person/create/', {
-      method: 'POST',
-      body: JSON.stringify(employeeData),
-    });
-    console.log('✅ Employee created successfully:', response);
-    return response;
-  } catch (error) {
-    console.error('❌ Failed to create employee:', error);
-    console.error('❌ Request payload was:', employeeData);
-    throw error;
-  }
-}
 
-async updateEmployee(id: number, data: Partial<CreateEmployeeRequest>): Promise<Employee> {
-  console.log(`✏️ Updating employee ${id}...`);
-  
-  const employeeData: any = {
-    user_id: this.USER_ID
-  };
-  
-  // ✅ ALWAYS send these fields if they're in the update data
-  if (data.device_id !== undefined) employeeData.device_id = data.device_id;
-  if (data.name !== undefined) employeeData.name = data.name;
-  if (data.user_type !== undefined) employeeData.user_type = data.user_type;
-  if (data.begin_time !== undefined) employeeData.begin_time = data.begin_time;
-  if (data.end_time !== undefined) employeeData.end_time = data.end_time;
-  if (data.door_right !== undefined) employeeData.door_right = data.door_right;
-  
-  // ✅ CRITICAL: Send these fields even if empty string
-  if (data.position !== undefined) employeeData.position = data.position;
-  if (data.phone_number !== undefined) employeeData.phone_number = data.phone_number;
-  if (data.salary !== undefined) employeeData.salary = data.salary;
-  if (data.fine !== undefined) employeeData.fine = data.fine;
-  
-  // ✅ Send optional text fields as empty string if undefined
-  if (data.employment !== undefined) employeeData.employment = data.employment || '';
-  if (data.description !== undefined) employeeData.description = data.description || '';
-  if (data.employee_no !== undefined) employeeData.employee_no = data.employee_no || '';
-  
-  // ✅ ONLY send foreign key fields if they're valid IDs (> 0)
-  if (data.department !== undefined && data.department && data.department > 0) {
-    employeeData.department = data.department;
+  async updateEmployee(id: number, data: Partial<CreateEmployeeRequest>): Promise<Employee> {
+    console.log(`✏️ Updating employee ${id}...`);
+    
+    const employeeData: any = {
+      user_id: this.USER_ID
+    };
+    
+    // ✅ ALWAYS send these fields if they're in the update data
+    if (data.device_id !== undefined) employeeData.device_id = data.device_id;
+    if (data.name !== undefined) employeeData.name = data.name;
+    if (data.user_type !== undefined) employeeData.user_type = data.user_type;
+    if (data.begin_time !== undefined) employeeData.begin_time = data.begin_time;
+    if (data.end_time !== undefined) employeeData.end_time = data.end_time;
+    if (data.door_right !== undefined) employeeData.door_right = data.door_right;
+    
+    // ✅ CRITICAL: Send these fields even if empty string
+    if (data.position !== undefined) employeeData.position = data.position;
+    if (data.phone_number !== undefined) employeeData.phone_number = data.phone_number;
+    if (data.salary !== undefined) employeeData.salary = data.salary;
+    if (data.fine !== undefined) employeeData.fine = data.fine;
+    
+    // ✅ Send optional text fields as empty string if undefined
+    if (data.employment !== undefined) employeeData.employment = data.employment || '';
+    if (data.description !== undefined) employeeData.description = data.description || '';
+    if (data.employee_no !== undefined) employeeData.employee_no = data.employee_no || '';
+    
+    // ✅ ONLY send foreign key fields if they're valid IDs (> 0)
+    if (data.department !== undefined && data.department && data.department > 0) {
+      employeeData.department = data.department;
+    }
+    
+    if (data.shift !== undefined && data.shift && data.shift > 0) {
+      employeeData.shift = data.shift;
+    }
+    
+    if (data.branch !== undefined && data.branch && data.branch > 0) {
+      employeeData.branch = data.branch;
+    }
+    
+    if (data.break_time !== undefined && data.break_time && data.break_time > 0) {
+      employeeData.break_time = data.break_time;
+    }
+    
+    if (data.work_day !== undefined && data.work_day && data.work_day > 0) {
+      employeeData.work_day = data.work_day;
+    }
+    
+    if (data.day_off !== undefined && data.day_off && data.day_off > 0) {
+      employeeData.day_off = data.day_off;
+    }
+    
+    console.log(`📦 Updating employee ${id} with data:`, employeeData);
+    
+    try {
+      const employee = await this.request<Employee>(`/person/update/${id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(employeeData),
+      });
+      console.log('✅ Employee updated:', employee);
+      return employee;
+    } catch (error) {
+      console.error(`❌ Failed to update employee ${id}:`, error);
+      throw error;
+    }
   }
-  
-  if (data.shift !== undefined && data.shift && data.shift > 0) {
-    employeeData.shift = data.shift;
-  }
-  
-  if (data.branch !== undefined && data.branch && data.branch > 0) {
-    employeeData.branch = data.branch;
-  }
-  
-  if (data.break_time !== undefined && data.break_time && data.break_time > 0) {
-    employeeData.break_time = data.break_time;
-  }
-  
-  if (data.work_day !== undefined && data.work_day && data.work_day > 0) {
-    employeeData.work_day = data.work_day;
-  }
-  
-  if (data.day_off !== undefined && data.day_off && data.day_off > 0) {
-    employeeData.day_off = data.day_off;
-  }
-  
-  console.log(`📦 Updating employee ${id} with data:`, employeeData);
-  
-  try {
-    const employee = await this.request<Employee>(`/person/update/${id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(employeeData),
-    });
-    console.log('✅ Employee updated:', employee);
-    return employee;
-  } catch (error) {
-    console.error(`❌ Failed to update employee ${id}:`, error);
-    throw error;
-  }
-}
 
   // Delete employee with user_id=2 in query parameter
   async deleteEmployee(id: number): Promise<void> {
@@ -731,6 +739,55 @@ async updateEmployee(id: number, data: Partial<CreateEmployeeRequest>): Promise<
     } catch (error) {
       console.error(`❌ Failed to delete employee ${id}:`, error);
       throw error;
+    }
+  }
+
+  // NEW: Get daily attendance list
+  async getDailyAttendance(date?: string): Promise<DailyAttendance> {
+    console.log('📊 Fetching daily attendance...');
+    
+    try {
+      // Format date if provided, otherwise use current date
+      let selectedDate: string;
+      if (date) {
+        selectedDate = date;
+      } else {
+        selectedDate = formatDate(new Date());
+      }
+      
+      // user_id bilan so'rov yuborish
+      const endpoint = `/person/daily-list/?date=${selectedDate}&user_id=${this.USER_ID}`;
+      console.log('🌐 Making request to:', endpoint);
+      
+      const response = await this.request<DailyAttendance>(endpoint);
+      console.log('✅ Daily attendance loaded');
+      console.log('📈 Stats:', response.stats);
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to load daily attendance:', error);
+      
+      // Agar API xato bersa, mock ma'lumotlarni qaytaring
+      console.log('🔄 Using mock data for daily attendance');
+      
+      return {
+        date: date || formatDate(new Date()),
+        employees: mockEmployees.map((emp, index) => ({
+          id: emp.id,
+          employee_no: emp.employee_no,
+          name: emp.name,
+          kirish: index === 0 ? '09:00' : null,
+          chiqish: index === 0 ? '18:00' : null,
+          late: '0:00',
+          face: emp.local_face,
+        })),
+        stats: {
+          total: mockEmployees.length,
+          came: 1,
+          late: 0,
+          absent: mockEmployees.length - 1,
+        },
+      };
     }
   }
 
@@ -786,31 +843,27 @@ export const mockEmployees: Employee[] = [
   },
 ];
 
-
-// Add this at the end of your lib/api.ts file (before the closing brace):
-
+// Mock daily attendance (for fallback)
 export const mockDailyAttendance: DailyAttendance = {
-  date: '2025-12-15',
+  date: formatDate(new Date()),
   employees: [
     {
       id: 1,
       employee_no: 'EMP001',
       name: 'Alisher Karimov',
-      photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-      entry_time: '09:00',
-      exit_time: '18:00',
-      late: false,
-      status: 'came' as 'came',
+      kirish: '09:00',
+      chiqish: '18:00',
+      late: '0:00',
+      face: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
     },
     {
       id: 2,
       employee_no: 'EMP002',
       name: 'Dilnoza Umarova',
-      photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-      entry_time: '',
-      exit_time: '',
-      late: false,
-      status: 'absent' as 'absent',
+      kirish: null,
+      chiqish: null,
+      late: '0:00',
+      face: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
     },
   ],
   stats: {
