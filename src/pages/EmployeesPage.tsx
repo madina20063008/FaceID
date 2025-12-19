@@ -66,29 +66,30 @@ export function EmployeesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
+  const [isViewLoading, setIsViewLoading] = useState(false);
 
   // Form data for create/edit
-const [formData, setFormData] = useState<CreateEmployeeRequest>({
-  name: "",
-  position: "",
-  phone_number: "",
-  // ❌ Remove employee_no from initial state
-  description: "",
-  salary: 0,
-  device_id: 1,
-  user_type: "normal",
-  begin_time: new Date().toISOString(),
-  end_time: new Date().toISOString(),
-  door_right: "1",
-  employment: "",
-  department: null,
-  shift: null,
-  break_time: null,
-  work_day: null,
-  branch: null,
-  fine: 0,
-  day_off: null,
-});
+  const [formData, setFormData] = useState<CreateEmployeeRequest>({
+    name: "",
+    position: "",
+    phone_number: "",
+    // ❌ Remove employee_no from initial state
+    description: "",
+    salary: 0,
+    device_id: 1,
+    user_type: "normal",
+    begin_time: new Date().toISOString(),
+    end_time: new Date().toISOString(),
+    door_right: "1",
+    employment: "",
+    department: null,
+    shift: null,
+    break_time: null,
+    work_day: null,
+    branch: null,
+    fine: 0,
+    day_off: null,
+  });
 
   // Filter employees locally for search
   const filteredEmployees = Array.isArray(employees)
@@ -138,203 +139,273 @@ const [formData, setFormData] = useState<CreateEmployeeRequest>({
     }
   };
 
-  // Refresh employees
+  // Refresh employees with sync functionality
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await fetchEmployees();
-      toast.success("Hodimlar ro'yxati yangilandi");
-    } catch (error) {
-      toast.error("Yangilashda xatolik");
+      console.log("🔄 Starting refresh process...");
+
+      if (useMockData) {
+        // In mock mode, just fetch employees
+        await fetchEmployees();
+        toast.success("Hodimlar ro'yxati yangilandi (namuna rejim)");
+      } else {
+        try {
+          console.log("🔄 Syncing employees with devices...");
+
+          // Step 1: Sync employees with devices
+          const syncResult = await apiService.syncEmployees();
+          console.log("✅ Sync result:", syncResult);
+
+          if (syncResult.success) {
+            let successMessage = `Hodimlar sinxronizatsiya qilindi`;
+
+            // Add sync statistics to the message
+            const statsMessages = [];
+            if (syncResult.synced_devices > 0) {
+              statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
+            }
+            if (syncResult.added > 0) {
+              statsMessages.push(
+                `${syncResult.added} ta yangi hodim qo'shildi`
+              );
+            }
+            if (syncResult.deleted > 0) {
+              statsMessages.push(`${syncResult.deleted} ta hodim o'chirildi`);
+            }
+
+            if (statsMessages.length > 0) {
+              successMessage += `: ${statsMessages.join(", ")}`;
+            }
+
+            toast.success(successMessage);
+          } else {
+            toast.warning(
+              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas"
+            );
+          }
+
+          // Step 2: Fetch updated employees list
+          console.log("📥 Fetching updated employees list...");
+          await fetchEmployees();
+        } catch (syncError: any) {
+          console.error("❌ Sync failed:", syncError);
+
+          // Try to fetch employees even if sync fails
+          console.log("🔄 Attempting to fetch employees without sync...");
+          try {
+            await fetchEmployees();
+            toast.warning(
+              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi"
+            );
+          } catch (fetchError) {
+            toast.error("Ikkala operatsiya ham amalga oshirilmadi");
+            throw syncError; // Re-throw the original error
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("❌ Refresh failed:", error);
+
+      // User-friendly error messages
+      if (error.message.includes("Failed to fetch")) {
+        toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
+      } else if (error.status === 401) {
+        toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
+      } else if (error.status === 403) {
+        toast.error("Bu amalni bajarish uchun ruxsat yo'q");
+      } else {
+        toast.error("Yangilashda xatolik yuz berdi");
+      }
     } finally {
       setIsRefreshing(false);
     }
   };
 
   // Create new employee
-const handleCreate = async () => {
-  try {
-    // Format phone number
-    let phoneNumber = formData.phone_number;
-    if (phoneNumber && !phoneNumber.startsWith("+998")) {
-      const cleanPhone = phoneNumber.replace(/\D/g, "");
-      if (cleanPhone.length === 9) {
-        phoneNumber = "+998" + cleanPhone;
-      } else if (cleanPhone.length === 12 && cleanPhone.startsWith("998")) {
-        phoneNumber = "+" + cleanPhone;
+  const handleCreate = async () => {
+    try {
+      // Format phone number
+      let phoneNumber = formData.phone_number;
+      if (phoneNumber && !phoneNumber.startsWith("+998")) {
+        const cleanPhone = phoneNumber.replace(/\D/g, "");
+        if (cleanPhone.length === 9) {
+          phoneNumber = "+998" + cleanPhone;
+        } else if (cleanPhone.length === 12 && cleanPhone.startsWith("998")) {
+          phoneNumber = "+" + cleanPhone;
+        }
       }
-    }
 
-    if (useMockData) {
-      // Create mock employee
-      const newEmployee: Employee = {
-        id:
-          employees.length > 0
-            ? Math.max(...employees.map((e) => e.id)) + 1
-            : 1,
-        employee_no: formData.employee_no || `EMP${Date.now()}`,
-        name: formData.name,
-        position: formData.position,
-        phone_number: phoneNumber,
-        local_face:
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-        description: formData.description,
-        salary: formData.salary,
-        device: formData.device_id,
-      };
+      if (useMockData) {
+        // Create mock employee
+        const newEmployee: Employee = {
+          id:
+            employees.length > 0
+              ? Math.max(...employees.map((e) => e.id)) + 1
+              : 1,
+          employee_no: formData.employee_no || `EMP${Date.now()}`,
+          name: formData.name,
+          position: formData.position,
+          phone_number: phoneNumber,
+          local_face:
+            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
+          description: formData.description,
+          salary: formData.salary,
+          device: formData.device_id,
+        };
 
-      setEmployees([...employees, newEmployee]);
-      toast.success("Hodim qo'shildi (namuna rejim)");
-    } else {
-      // Prepare employee data - DO NOT include employee_no
-      const employeeData: CreateEmployeeRequest = {
-        device_id: formData.device_id,
-        name: formData.name,
-        user_type: formData.user_type,
-        begin_time: formData.begin_time,
-        end_time: formData.end_time,
-        door_right: formData.door_right,
-        employment: formData.employment || "", // Ensure empty string, not undefined
-        department: formData.department,
-        position: formData.position || "", // Ensure empty string, not undefined
-        shift: formData.shift,
-        description: formData.description || "", // Ensure empty string, not undefined
-        phone_number: phoneNumber,
-        salary: formData.salary || 0, // Ensure 0 if undefined
-        break_time: formData.break_time,
-        work_day: formData.work_day,
-        branch: formData.branch,
-        fine: formData.fine || 0, // Ensure 0 if undefined
-        day_off: formData.day_off,
-        // ❌ DO NOT include employee_no - API will generate it
-      };
+        setEmployees([...employees, newEmployee]);
+        toast.success("Hodim qo'shildi (namuna rejim)");
+      } else {
+        // Prepare employee data - DO NOT include employee_no
+        const employeeData: CreateEmployeeRequest = {
+          device_id: formData.device_id,
+          name: formData.name,
+          user_type: formData.user_type,
+          begin_time: formData.begin_time,
+          end_time: formData.end_time,
+          door_right: formData.door_right,
+          employment: formData.employment || "", // Ensure empty string, not undefined
+          department: formData.department,
+          position: formData.position || "", // Ensure empty string, not undefined
+          shift: formData.shift,
+          description: formData.description || "", // Ensure empty string, not undefined
+          phone_number: phoneNumber,
+          salary: formData.salary || 0, // Ensure 0 if undefined
+          break_time: formData.break_time,
+          work_day: formData.work_day,
+          branch: formData.branch,
+          fine: formData.fine || 0, // Ensure 0 if undefined
+          day_off: formData.day_off,
+          // ❌ DO NOT include employee_no - API will generate it
+        };
 
-      // 🔍 DEBUG: Log what we're sending
-      console.log("🔍 DEBUG - Creating employee with data:", {
-        position: employeeData.position,
-        phone_number: employeeData.phone_number,
-        salary: employeeData.salary,
-        description: employeeData.description,
-        department: employeeData.department,
-        shift: employeeData.shift,
-        branch: employeeData.branch,
-        fullData: employeeData,
-      });
-
-      console.log("➕ Creating employee (NO employee_no):", employeeData);
-
-      try {
-        await apiService.createEmployee(employeeData);
-        toast.success("Hodim muvaffaqiyatli qo'shildi");
-      } catch (apiError: any) {
-        console.error("❌ API create error details:", {
-          message: apiError.message,
-          data: apiError.data,
-          status: apiError.status,
+        // 🔍 DEBUG: Log what we're sending
+        console.log("🔍 DEBUG - Creating employee with data:", {
+          position: employeeData.position,
+          phone_number: employeeData.phone_number,
+          salary: employeeData.salary,
+          description: employeeData.description,
+          department: employeeData.department,
+          shift: employeeData.shift,
+          branch: employeeData.branch,
+          fullData: employeeData,
         });
 
-        // More specific error messages
-        if (apiError.message.includes("Invalid pk")) {
-          toast.error(`Xato: Noto'g'ri ID (${apiError.message})`);
-        } else if (apiError.status === 400) {
-          toast.error(
-            "Noto'g'ri ma'lumotlar. Barcha majburiy maydonlarni to'ldiring."
-          );
-        } else {
-          toast.error(
-            "Hodim qo'shishda xatolik: " +
-              (apiError.message || "Noma'lum xatolik")
-          );
-        }
-        throw apiError;
-      }
-    }
+        console.log("➕ Creating employee (NO employee_no):", employeeData);
 
-    setIsCreateOpen(false);
-    resetFormData();
-    await fetchEmployees(); // Refresh list
-  } catch (error: any) {
-    console.error("Failed to create employee:", error);
-    // Don't show toast here since we already showed it in the API error catch
-  }
-};
+        try {
+          await apiService.createEmployee(employeeData);
+          toast.success("Hodim muvaffaqiyatli qo'shildi");
+        } catch (apiError: any) {
+          console.error("❌ API create error details:", {
+            message: apiError.message,
+            data: apiError.data,
+            status: apiError.status,
+          });
+
+          // More specific error messages
+          if (apiError.message.includes("Invalid pk")) {
+            toast.error(`Xato: Noto'g'ri ID (${apiError.message})`);
+          } else if (apiError.status === 400) {
+            toast.error(
+              "Noto'g'ri ma'lumotlar. Barcha majburiy maydonlarni to'ldiring."
+            );
+          } else {
+            toast.error(
+              "Hodim qo'shishda xatolik: " +
+                (apiError.message || "Noma'lum xatolik")
+            );
+          }
+          throw apiError;
+        }
+      }
+
+      setIsCreateOpen(false);
+      resetFormData();
+      await fetchEmployees(); // Refresh list
+    } catch (error: any) {
+      console.error("Failed to create employee:", error);
+      // Don't show toast here since we already showed it in the API error catch
+    }
+  };
 
   // Update employee
-const handleUpdate = async () => {
-  if (!editEmployee) return;
+  const handleUpdate = async () => {
+    if (!editEmployee) return;
 
-  try {
-    // Format phone number
-    let phoneNumber = formData.phone_number;
-    if (phoneNumber && !phoneNumber.startsWith("+998")) {
-      const cleanPhone = phoneNumber.replace(/\D/g, "");
-      if (cleanPhone.length === 9) {
-        phoneNumber = "+998" + cleanPhone;
-      } else if (cleanPhone.length === 12 && cleanPhone.startsWith("998")) {
-        phoneNumber = "+" + cleanPhone;
+    try {
+      // Format phone number
+      let phoneNumber = formData.phone_number;
+      if (phoneNumber && !phoneNumber.startsWith("+998")) {
+        const cleanPhone = phoneNumber.replace(/\D/g, "");
+        if (cleanPhone.length === 9) {
+          phoneNumber = "+998" + cleanPhone;
+        } else if (cleanPhone.length === 12 && cleanPhone.startsWith("998")) {
+          phoneNumber = "+" + cleanPhone;
+        }
       }
-    }
 
-    if (useMockData) {
-      // Update mock employee
-      setEmployees(
-        employees.map((emp) =>
-          emp.id === editEmployee.id
-            ? {
-                ...emp,
-                name: formData.name,
-                position: formData.position,
-                phone_number: phoneNumber,
-                employee_no: formData.employee_no || emp.employee_no,
-                description: formData.description,
-                salary: formData.salary,
-              }
-            : emp
-        )
+      if (useMockData) {
+        // Update mock employee
+        setEmployees(
+          employees.map((emp) =>
+            emp.id === editEmployee.id
+              ? {
+                  ...emp,
+                  name: formData.name,
+                  position: formData.position,
+                  phone_number: phoneNumber,
+                  employee_no: formData.employee_no || emp.employee_no,
+                  description: formData.description,
+                  salary: formData.salary,
+                }
+              : emp
+          )
+        );
+        toast.success("Hodim yangilandi (namuna rejim)");
+      } else {
+        // Prepare update data - DO NOT include employee_no
+        const updateData: Partial<CreateEmployeeRequest> = {
+          device_id: formData.device_id,
+          name: formData.name,
+          user_type: formData.user_type,
+          begin_time: formData.begin_time,
+          end_time: formData.end_time,
+          door_right: formData.door_right,
+          employment: formData.employment || "",
+          department: formData.department,
+          position: formData.position || "",
+          shift: formData.shift,
+          description: formData.description || "",
+          phone_number: phoneNumber,
+          salary: formData.salary || 0,
+          break_time: formData.break_time,
+          work_day: formData.work_day,
+          branch: formData.branch,
+          fine: formData.fine || 0,
+          day_off: formData.day_off,
+          // ❌ DO NOT include employee_no in updates
+        };
+
+        console.log(
+          `✏️ Updating employee ${editEmployee.id} (NO employee_no):`,
+          updateData
+        );
+        await apiService.updateEmployee(editEmployee.id, updateData);
+        toast.success("Hodim ma'lumotlari yangilandi");
+      }
+
+      setEditEmployee(null);
+      resetFormData();
+      await fetchEmployees(); // Refresh list
+    } catch (error: any) {
+      console.error("Failed to update employee:", error);
+      toast.error(
+        "Yangilashda xatolik: " + (error.message || "Noma'lum xatolik")
       );
-      toast.success("Hodim yangilandi (namuna rejim)");
-    } else {
-      // Prepare update data - DO NOT include employee_no
-      const updateData: Partial<CreateEmployeeRequest> = {
-        device_id: formData.device_id,
-        name: formData.name,
-        user_type: formData.user_type,
-        begin_time: formData.begin_time,
-        end_time: formData.end_time,
-        door_right: formData.door_right,
-        employment: formData.employment || "",
-        department: formData.department,
-        position: formData.position || "",
-        shift: formData.shift,
-        description: formData.description || "",
-        phone_number: phoneNumber,
-        salary: formData.salary || 0,
-        break_time: formData.break_time,
-        work_day: formData.work_day,
-        branch: formData.branch,
-        fine: formData.fine || 0,
-        day_off: formData.day_off,
-        // ❌ DO NOT include employee_no in updates
-      };
-
-      console.log(
-        `✏️ Updating employee ${editEmployee.id} (NO employee_no):`,
-        updateData
-      );
-      await apiService.updateEmployee(editEmployee.id, updateData);
-      toast.success("Hodim ma'lumotlari yangilandi");
     }
-
-    setEditEmployee(null);
-    resetFormData();
-    await fetchEmployees(); // Refresh list
-  } catch (error: any) {
-    console.error("Failed to update employee:", error);
-    toast.error(
-      "Yangilashda xatolik: " + (error.message || "Noma'lum xatolik")
-    );
-  }
-};
+  };
 
   // Delete employee
   const handleDelete = async () => {
@@ -362,85 +433,117 @@ const handleUpdate = async () => {
   };
 
   // Open edit dialog
-const openEdit = (employee: Employee) => {
-  console.log("🔧 openEdit function called");
-  console.log("👤 Employee object received:", employee);
+  const openEdit = (employee: Employee) => {
+    console.log("🔧 openEdit function called");
+    console.log("👤 Employee object received:", employee);
 
+    try {
+      setEditEmployee(employee);
+
+      const editFormData = {
+        name: employee.name || "",
+        position: employee.position || "",
+        phone_number: employee.phone_number || "",
+        // ❌ Don't load employee_no into form for editing
+        description: employee.description || "",
+        salary: employee.salary || 0,
+        device_id: employee.device || 1,
+        user_type: employee.user_type || "normal",
+        begin_time: employee.begin_time || new Date().toISOString(),
+        end_time: employee.end_time || new Date().toISOString(),
+        door_right: employee.door_right || "1",
+        employment: employee.employment || "",
+        department: employee.department || null,
+        shift: employee.shift || null,
+        break_time: employee.break_time || null,
+        work_day: employee.work_day || null,
+        branch: employee.branch || null,
+        fine: employee.fine || 0,
+        day_off: employee.day_off || null,
+      };
+
+      setFormData(editFormData);
+
+      // 🔍 DEBUG: Log what we're loading for edit
+      console.log("🔍 DEBUG - Loading employee for edit:", {
+        name: employee.name,
+        position: employee.position,
+        salary: employee.salary,
+        description: employee.description,
+        department: employee.department,
+        shift: employee.shift,
+        branch: employee.branch,
+        id: employee.id,
+        employee_no: employee.employee_no, // Still show in console but not in form
+      });
+
+      console.log("📋 Form data set to:", editFormData);
+      console.log("✅ Edit dialog should open now");
+    } catch (error) {
+      console.error("❌ Error in openEdit:", error);
+    }
+  };
+
+  // Open view dialog
+const openView = async (employee: Employee) => {
   try {
-    setEditEmployee(employee);
-
-    const editFormData = {
-      name: employee.name || "",
-      position: employee.position || "",
-      phone_number: employee.phone_number || "",
-      // ❌ Don't load employee_no into form for editing
-      description: employee.description || "",
-      salary: employee.salary || 0,
-      device_id: employee.device || 1,
-      user_type: employee.user_type || "normal",
-      begin_time: employee.begin_time || new Date().toISOString(),
-      end_time: employee.end_time || new Date().toISOString(),
-      door_right: employee.door_right || "1",
-      employment: employee.employment || "",
-      department: employee.department || null,
-      shift: employee.shift || null,
-      break_time: employee.break_time || null,
-      work_day: employee.work_day || null,
-      branch: employee.branch || null,
-      fine: employee.fine || 0,
-      day_off: employee.day_off || null,
-    };
-
-    setFormData(editFormData);
-
-    // 🔍 DEBUG: Log what we're loading for edit
-    console.log("🔍 DEBUG - Loading employee for edit:", {
-      name: employee.name,
-      position: employee.position,
-      salary: employee.salary,
-      description: employee.description,
-      department: employee.department,
-      shift: employee.shift,
-      branch: employee.branch,
-      id: employee.id,
-      employee_no: employee.employee_no // Still show in console but not in form
-    });
-
-    console.log("📋 Form data set to:", editFormData);
-    console.log("✅ Edit dialog should open now");
+    console.log("👁️ Opening view for employee ID:", employee.id);
+    
+    setIsViewLoading(true); // Set loading to true
+    setViewEmployee(employee);
+    
+    if (useMockData) {
+      // Use existing data for mock mode
+      console.log("📊 Using mock data for view");
+      setIsViewLoading(false);
+    } else {
+      // Fetch detailed employee data from API
+      console.log(`📡 Fetching detailed data for employee ${employee.id}`);
+      
+      try {
+        const detailedEmployee = await apiService.getEmployeeById(
+          employee.id
+        );
+        console.log("✅ Detailed employee data loaded");
+        setViewEmployee(detailedEmployee);
+      } catch (error: any) {
+        console.error("❌ Failed to fetch employee details:", error);
+        // Keep current employee data
+        toast.warning("To'liq ma'lumotlar yuklanmadi");
+      } finally {
+        setIsViewLoading(false); // Set loading to false when done
+      }
+    }
   } catch (error) {
-    console.error("❌ Error in openEdit:", error);
+    console.error("❌ Error in openView:", error);
+    setIsViewLoading(false);
+    toast.error("Hodim ma'lumotlarini ochishda xatolik");
   }
 };
 
-  // Open view dialog
-  const openView = (employee: Employee) => {
-    setViewEmployee(employee);
-  };
-
   const resetFormData = () => {
-  setFormData({
-    name: "",
-    position: "",
-    phone_number: "",
-    // ❌ Remove employee_no from reset
-    description: "",
-    salary: 0,
-    device_id: 1,
-    user_type: "normal",
-    begin_time: new Date().toISOString(),
-    end_time: new Date().toISOString(),
-    door_right: "1",
-    employment: "",
-    department: null,
-    shift: null,
-    break_time: null,
-    work_day: null,
-    branch: null,
-    fine: 0,
-    day_off: null,
-  });
-};
+    setFormData({
+      name: "",
+      position: "",
+      phone_number: "",
+      // ❌ Remove employee_no from reset
+      description: "",
+      salary: 0,
+      device_id: 1,
+      user_type: "normal",
+      begin_time: new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      door_right: "1",
+      employment: "",
+      department: null,
+      shift: null,
+      break_time: null,
+      work_day: null,
+      branch: null,
+      fine: 0,
+      day_off: null,
+    });
+  };
 
   // Handle search
   const handleSearch = async () => {
@@ -503,7 +606,7 @@ const openEdit = (employee: Employee) => {
             <RefreshCw
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
-            Yangilash
+            {isRefreshing ? "Sinxronizatsiya..." : "Yangilash"}
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -616,7 +719,7 @@ const openEdit = (employee: Employee) => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          
+
                           <Button
                             variant="ghost"
                             size="icon"
@@ -653,208 +756,214 @@ const openEdit = (employee: Employee) => {
       </Card>
 
       {/* Create/Edit Dialog */}
-<Dialog
-  open={isCreateOpen || !!editEmployee}
-  onOpenChange={(open) => {
-    if (!open) {
-      setIsCreateOpen(false);
-      setEditEmployee(null);
-      resetFormData();
-    }
-  }}
->
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle>
-        {editEmployee ? "Hodimni tahrirlash" : "Yangi hodim qo'shish"}
-      </DialogTitle>
-      <DialogDescription>
-        Hodim ma'lumotlarini kiriting
-        {useMockData && " (namuna rejim)"}
-      </DialogDescription>
-    </DialogHeader>
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Ism familiya *</Label>
-        <Input
-          id="name"
-          value={formData.name}
-          onChange={(e) =>
-            setFormData({ ...formData, name: e.target.value })
+      <Dialog
+        open={isCreateOpen || !!editEmployee}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateOpen(false);
+            setEditEmployee(null);
+            resetFormData();
           }
-          placeholder="Alisher Karimov"
-          required
-        />
-      </div>
-      {/* ❌ REMOVE employee_no input field entirely */}
-      <div className="space-y-2">
-        <Label htmlFor="position">Lavozim *</Label>
-        <Input
-          id="position"
-          value={formData.position}
-          onChange={(e) =>
-            setFormData({ ...formData, position: e.target.value })
-          }
-          placeholder="Frontend Developer"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="phone_number">Telefon raqami *</Label>
-        <Input
-          id="phone_number"
-          type="tel"
-          value={formData.phone_number}
-          onChange={(e) =>
-            setFormData({ ...formData, phone_number: e.target.value })
-          }
-          placeholder="+998 90 123 45 67"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="salary">Maosh (so'm)</Label>
-        <Input
-          id="salary"
-          type="number"
-          value={formData.salary}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              salary: parseInt(e.target.value) || 0,
-            })
-          }
-          placeholder="3000000"
-          min="0"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="description">Izoh</Label>
-        <Input
-          id="description"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
-          placeholder="Qo'shimcha ma'lumotlar..."
-        />
-      </div>
-    </div>
-    <DialogFooter>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setIsCreateOpen(false);
-          setEditEmployee(null);
-          resetFormData();
         }}
       >
-        Bekor qilish
-      </Button>
-      <Button
-        onClick={editEmployee ? handleUpdate : handleCreate}
-        disabled={
-          !formData.name || !formData.position || !formData.phone_number
-        }
-      >
-        {editEmployee ? "Saqlash" : "Qo'shish"}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
-      {/* View Dialog */}
-      <Dialog open={!!viewEmployee} onOpenChange={() => setViewEmployee(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Hodim ma'lumotlari</DialogTitle>
+            <DialogTitle>
+              {editEmployee ? "Hodimni tahrirlash" : "Yangi hodim qo'shish"}
+            </DialogTitle>
+            <DialogDescription>
+              Hodim ma'lumotlarini kiriting
+              {useMockData && " (namuna rejim)"}
+            </DialogDescription>
           </DialogHeader>
-          {viewEmployee && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage
-                    src={viewEmployee.local_face}
-                    alt={viewEmployee.name}
-                  />
-                  <AvatarFallback className="text-xl">
-                    {viewEmployee.name
-                      ? viewEmployee.name.charAt(0).toUpperCase()
-                      : "H"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-xl font-semibold">
-                    {viewEmployee.name || "Noma'lum"}
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {viewEmployee.position || "N/A"}
-                  </p>
-                  {viewEmployee.id && (
-                    <p className="text-sm text-gray-500">
-                      ID: {viewEmployee.id}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Hodim raqami
-                  </p>
-                  <p className="font-medium">
-                    {viewEmployee.employee_no || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Telefon raqami
-                  </p>
-                  <p className="font-medium">
-                    {viewEmployee.phone_number || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Lavozim
-                  </p>
-                  <p className="font-medium">
-                    {viewEmployee.position || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Maosh
-                  </p>
-                  <p className="font-medium">
-                    {formatCurrency(viewEmployee.salary)}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Izoh
-                  </p>
-                  <p className="font-medium">
-                    {viewEmployee.description || "N/A"}
-                  </p>
-                </div>
-                {viewEmployee.created_at && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Yaratilgan sana
-                    </p>
-                    <p className="font-medium">
-                      {new Date(viewEmployee.created_at).toLocaleDateString(
-                        "uz-UZ"
-                      )}
-                    </p>
-                  </div>
-                )}
-              </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Ism familiya *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Alisher Karimov"
+                required
+              />
             </div>
-          )}
+            {/* ❌ REMOVE employee_no input field entirely */}
+            <div className="space-y-2">
+              <Label htmlFor="position">Lavozim *</Label>
+              <Input
+                id="position"
+                value={formData.position}
+                onChange={(e) =>
+                  setFormData({ ...formData, position: e.target.value })
+                }
+                placeholder="Frontend Developer"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone_number">Telefon raqami *</Label>
+              <Input
+                id="phone_number"
+                type="tel"
+                value={formData.phone_number}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone_number: e.target.value })
+                }
+                placeholder="+998 90 123 45 67"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="salary">Maosh (so'm)</Label>
+              <Input
+                id="salary"
+                type="number"
+                value={formData.salary}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    salary: parseInt(e.target.value) || 0,
+                  })
+                }
+                placeholder="3000000"
+                min="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Izoh</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Qo'shimcha ma'lumotlar..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCreateOpen(false);
+                setEditEmployee(null);
+                resetFormData();
+              }}
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              onClick={editEmployee ? handleUpdate : handleCreate}
+              disabled={
+                !formData.name || !formData.position || !formData.phone_number
+              }
+            >
+              {editEmployee ? "Saqlash" : "Qo'shish"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View Dialog */}
+<Dialog open={!!viewEmployee} onOpenChange={() => setViewEmployee(null)}>
+  <DialogContent className="max-w-md">
+    <DialogHeader>
+      <DialogTitle>Hodim ma'lumotlari</DialogTitle>
+    </DialogHeader>
+    
+    {isViewLoading ? (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+        <p className="mt-2 text-gray-500">Hodim ma'lumotlari yuklanmoqda...</p>
+      </div>
+    ) : viewEmployee ? (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-20 w-20">
+            <AvatarImage
+              src={viewEmployee.local_face}
+              alt={viewEmployee.name}
+            />
+            <AvatarFallback className="text-xl">
+              {viewEmployee.name
+                ? viewEmployee.name.charAt(0).toUpperCase()
+                : "H"}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="text-xl font-semibold">
+              {viewEmployee.name || "Noma'lum"}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              {viewEmployee.position || "N/A"}
+            </p>
+            {viewEmployee.id && (
+              <p className="text-sm text-gray-500">
+                ID: {viewEmployee.id}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Hodim raqami
+            </p>
+            <p className="font-medium">
+              {viewEmployee.employee_no || "N/A"}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Telefon raqami
+            </p>
+            <p className="font-medium">
+              {viewEmployee.phone_number || "N/A"}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Lavozim
+            </p>
+            <p className="font-medium">
+              {viewEmployee.position || "N/A"}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Maosh
+            </p>
+            <p className="font-medium">
+              {formatCurrency(viewEmployee.salary)}
+            </p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Izoh
+            </p>
+            <p className="font-medium">
+              {viewEmployee.description || "N/A"}
+            </p>
+          </div>
+          {viewEmployee.created_at && (
+            <div className="col-span-2">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Yaratilgan sana
+              </p>
+              <p className="font-medium">
+                {new Date(viewEmployee.created_at).toLocaleDateString(
+                  "uz-UZ"
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null}
+  </DialogContent>
+</Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog

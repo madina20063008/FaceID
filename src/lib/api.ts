@@ -452,18 +452,32 @@ class ApiService {
     }
   }
 
-  // NEW: Get employee by ID
-  async getEmployeeById(id: number): Promise<Employee> {
-    console.log(`👤 Fetching employee with ID: ${id}`);
-    try {
-      const employee = await this.request<Employee>(`/person/get/${id}/`);
-      console.log('✅ Employee loaded:', employee.name);
-      return employee;
-    } catch (error) {
-      console.error(`❌ Failed to load employee ${id}:`, error);
-      throw error;
+  /// NEW: Get employee by ID with user_id=2
+async getEmployeeById(id: number): Promise<Employee> {
+  console.log(`👤 Fetching employee with ID: ${id}`);
+  
+  try {
+    // Add user_id parameter like your other endpoints
+    const endpoint = `/person/employee-detail/${id}/?user_id=${this.USER_ID}`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    const employee = await this.request<Employee>(endpoint);
+    console.log('✅ Employee loaded:', employee.name);
+    console.log('📊 Full employee data:', employee);
+    return employee;
+  } catch (error) {
+    console.error(`❌ Failed to load employee ${id}:`, error);
+    
+    // More specific error handling
+    if ((error as any).status === 404) {
+      throw new Error(`Hodim topilmadi (ID: ${id})`);
+    } else if ((error as any).status === 403) {
+      throw new Error('Bu hodimni ko\'rish uchun ruxsat yo\'q');
     }
+    
+    throw error;
   }
+}
 
   // NEW: Search employees with user_id=2
   async searchEmployees(query: string): Promise<Employee[]> {
@@ -493,14 +507,40 @@ class ApiService {
       throw error;
     }
   }
-
+// Sync employees with devices
+async syncEmployees(): Promise<{
+  success: boolean;
+  synced_devices: number;
+  added: number;
+  deleted: number;
+  message?: string;
+}> {
+  console.log('🔄 Syncing employees with devices...');
+  
+  try {
+    // Send POST request to sync endpoint with user_id parameter
+    const endpoint = `/person/sync-employees/?user_id=${this.USER_ID}`;
+    console.log('🌐 Making sync request to:', endpoint);
+    
+    const response = await this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({}), // Empty body, user_id is in query params
+    });
+    
+    console.log('✅ Employees synced successfully:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to sync employees:', error);
+    throw error;
+  }
+}
   // Get all employees with user_id=2
   async getEmployees(): Promise<Employee[]> {
     console.log('👥 Fetching all employees...');
     console.log('👤 Using user_id:', this.USER_ID);
     
     try {
-      const endpoint = `/person/sync-employees/?user_id=${this.USER_ID}`;
+      const endpoint = `/person/employees/?user_id=${this.USER_ID}`;
       console.log('🌐 Making request to:', endpoint);
       
       const response = await this.request<any>(endpoint);
