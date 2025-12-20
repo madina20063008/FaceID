@@ -156,45 +156,29 @@ class ApiService {
     }
     return this.refreshTokenString;
   }
-// lib/api.ts - syncEvents metodini yangilang
-async syncEvents(fromDate?: string, toDate?: string): Promise<EventSyncResponse> {
+// Updated syncEvents method - NO date parameters in URL
+async syncEvents(): Promise<EventSyncResponse> {
   console.log('🔄 Syncing events from devices...');
-  console.log('📅 Date range:', { fromDate, toDate });
   
   try {
-    // Build query parameters - EXACTLY like syncEmployees
-    const params = new URLSearchParams();
-    params.append('user_id', this.USER_ID.toString());
-    
-    if (fromDate) {
-      params.append('from_date', fromDate);
-    }
-    
-    if (toDate) {
-      params.append('to_date', toDate);
-    }
-    
-    // Send POST request to sync events - EXACTLY like syncEmployees
-    const endpoint = `/event/event-sync/?${params.toString()}`;
+    // Send POST request WITHOUT any date parameters
+    const endpoint = `/event/events-sync/?user_id=${this.USER_ID}`;
     console.log('🌐 Making sync request to:', endpoint);
     
     const response = await this.request<any>(endpoint, {
       method: 'POST',
-      body: JSON.stringify({}), // Empty body, parameters in query
+      body: JSON.stringify({}), // Empty body
     });
     
     console.log('✅ Events sync API response:', response);
     
     // Format response to match EventSyncResponse interface
     return {
-      success: response.success !== false,
-      synced_devices: response.synced_devices || 0,
-      synced_events: response.synced_events || 0,
-      from_date: response.from_date || fromDate,
-      to_date: response.to_date || toDate,
-      message: response.message,
-      error: response.error,
-    };
+  success: response.success,
+  synced_devices: response.synced_devices ?? 0,
+  synced_events: response.synced_events ?? response.added ?? 0,
+};
+
   } catch (error: any) {
     console.error('❌ Failed to sync events:', error);
     

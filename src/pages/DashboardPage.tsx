@@ -88,8 +88,7 @@ export function DashboardPage() {
 
           // Step 1: Sync events with devices (TODAY only)
           const syncResult = await apiService.syncEvents(
-            selectedDate, // fromDate = selectedDate
-            selectedDate  // toDate = selectedDate
+            
           );
           console.log('✅ Sync result:', syncResult);
 
