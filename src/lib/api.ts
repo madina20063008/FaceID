@@ -112,12 +112,53 @@ export interface EventSyncResponse {
   error?: string;
 }
 
+export interface EmployeeHistory {
+    id: number,
+    event_time: string,
+    label_name: string
+}
 // Helper function to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+// Helper functions for time formatting
+export const formatTimeFromISO = (isoString: string): string => {
+  try {
+    const date = new Date(isoString);
+    
+    // Local timezone ga convert qilish
+    return date.toLocaleTimeString('uz-UZ', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return isoString;
+  }
+};
+
+export const formatDateTime = (isoString: string): { date: string, time: string } => {
+  try {
+    const date = new Date(isoString);
+    
+    return {
+      date: date.toLocaleDateString('uz-UZ'),
+      time: date.toLocaleTimeString('uz-UZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+    };
+  } catch (error) {
+    console.error('Error formatting date time:', error);
+    return { date: isoString, time: isoString };
+  }
 };
 
 // API Service
@@ -156,6 +197,104 @@ class ApiService {
     }
     return this.refreshTokenString;
   }
+// Updated getEmployeeHistory method with date filtering
+async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHistory[]> {
+  console.log(`📅 Fetching employee history for employee ${employeeId} on ${date}...`);
+  
+  try {
+    // Validate parameters
+    if (!employeeId || isNaN(employeeId)) {
+      throw new Error('Noto\'g\'ri hodim ID si');
+    }
+    
+    if (!date) {
+      throw new Error('Sana kiritilmagan');
+    }
+    
+    console.log('✅ Parameters validated:', { date, employeeId });
+    
+    // Build query parameters - EXACT: API expects these parameter names
+    const params = new URLSearchParams();
+    params.append('date', date);           // Tanlangan sana
+    params.append('employee_id', employeeId.toString()); // Hodim ID
+    params.append('user_id', this.USER_ID.toString());   // User ID
+    
+    const endpoint = `/person/employee-history/?${params.toString()}`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    // Fetch data from API
+    const response = await this.request<EmployeeHistory[]>(endpoint);
+    console.log(`✅ Loaded ${response.length} history records`);
+    
+    // Agar backend barcha sanalarni qaytarsa, frontendda filter qilish
+    if (response.length > 0) {
+      const filteredByDate = response.filter(record => {
+        const recordDate = record.event_time.split('T')[0]; // "2025-12-20T08:19:05+05:00" -> "2025-12-20"
+        return recordDate === date;
+      });
+      
+      console.log(`📊 Filtered to ${filteredByDate.length} records for date ${date}`);
+      return filteredByDate;
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to load employee history:', error);
+    console.error('❌ Error details:', {
+      date: date,
+      employeeId: employeeId,
+      error: error
+    });
+    
+    // Provide user-friendly error messages
+    if (error.message.includes('Noto\'g\'ri hodim ID si')) {
+      throw new Error('Noto\'g\'ri hodim ID si');
+    } else if (error.message.includes('Sana kiritilmagan')) {
+      throw new Error('Sana kiritilmagan');
+    } else if ((error as any).status === 404) {
+      throw new Error('Hodim yoki sana uchun tarix topilmadi');
+    } else if ((error as any).status === 400) {
+      throw new Error('Noto\'g\'ri sana yoki hodim ID si');
+    }
+    
+    throw error;
+  }
+}
+
+// Optional: Get employee history with date range
+async getEmployeeHistoryRange(
+  employeeId: number, 
+  startDate: string, 
+  endDate: string
+): Promise<EmployeeHistory[]> {
+  console.log(`📅 Fetching employee ${employeeId} history from ${startDate} to ${endDate}...`);
+  
+  try {
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('employee_id', employeeId.toString());
+    params.append('start_date', startDate);
+    params.append('end_date', endDate);
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/person/employee-history/?${params.toString()}`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    const response = await this.request<EmployeeHistory[]>(endpoint);
+    console.log(`✅ Loaded ${response.length} history records`);
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to load employee history range:', error);
+    throw error;
+  }
+}
+
+// Optional: Get employee history for today
+async getEmployeeHistoryToday(employeeId: number): Promise<EmployeeHistory[]> {
+  const today = formatDate(new Date());
+  return await this.getEmployeeHistory(today, employeeId);
+}
 // Updated syncEvents method - NO date parameters in URL
 async syncEvents(): Promise<EventSyncResponse> {
   console.log('🔄 Syncing events from devices...');

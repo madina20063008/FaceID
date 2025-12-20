@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiService, DailyAttendance, formatDate, EventSyncResponse } from '../lib/api';
+import { apiService, DailyAttendance, formatDate, EventSyncResponse, EmployeeHistory } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../app/components/ui/card';
 import { Input } from '../app/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../app/components/ui/avatar';
@@ -22,10 +22,27 @@ import {
 } from '../app/components/ui/select';
 import { 
   Users, UserCheck, Clock, UserX, Calendar, Search, RefreshCw,
-  AlertCircle, Database, Download, ArrowDownUp
+  AlertCircle, Database, Download, History, Filter,
+  DoorOpen, DoorClosed, X, Clock4, User,
+  ArrowLeft, Loader2, Eye, CheckCircle, XCircle
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+
+// Helper function to format time from ISO string
+const formatTimeFromISO = (isoString: string): string => {
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return isoString;
+  }
+};
 
 export function DashboardPage() {
   // Format today's date as YYYY-MM-DD
@@ -38,6 +55,30 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
+  
+  // Employee History States
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [selectedEmployeeName, setSelectedEmployeeName] = useState<string>('');
+  const [selectedEmployeeNo, setSelectedEmployeeNo] = useState<string>('');
+  const [employeeHistory, setEmployeeHistory] = useState<EmployeeHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<string>('all'); // 'all', 'kirish', 'chiqish'
+
+  // Debug: Check employee data structure
+  useEffect(() => {
+    if (attendance && attendance.employees.length > 0) {
+      console.log('🔍 Employee data structure check:');
+      console.log('First employee:', attendance.employees[0]);
+      console.log('All employee IDs:', attendance.employees.map(emp => ({
+        id: emp.id,
+        employee_no: emp.employee_no,
+        name: emp.name,
+        hasId: !!emp.id,
+        hasEmployeeNo: !!emp.employee_no
+      })));
+    }
+  }, [attendance]);
 
   // Load attendance data
   const loadAttendance = async (date?: string) => {
@@ -72,7 +113,208 @@ export function DashboardPage() {
     }
   };
 
-  // 🔄 REFRESH WITH SYNC FUNCTIONALITY (exactly like EmployeesPage)
+  // FIXED: Load employee history with proper identifier handling
+  const loadEmployeeHistory = async (employee: any) => {
+    try {
+      console.log('🔍 Starting to load employee history...');
+      console.log('📋 Employee object received:', employee);
+      
+      // Get employee identifier - try multiple approaches
+      let employeeIdentifier: number | string | undefined;
+      let identifierType = '';
+      
+      // Approach 1: Use direct id if available
+      if (employee?.id !== undefined && employee.id !== null && !isNaN(employee.id)) {
+        employeeIdentifier = Number(employee.id);
+        identifierType = 'direct_id';
+      } 
+      // Approach 2: Extract from employee_no (e.g., "123" or "EMP001")
+      else if (employee?.employee_no) {
+        console.log('🔄 Extracting ID from employee_no:', employee.employee_no);
+        
+        // Try to extract numbers from employee_no
+        const match = employee.employee_no.match(/\d+/);
+        if (match) {
+          employeeIdentifier = parseInt(match[0]);
+          identifierType = 'extracted_from_employee_no';
+        } else {
+          // If no numbers, use the whole string
+          employeeIdentifier = employee.employee_no;
+          identifierType = 'employee_no_string';
+        }
+      }
+      // Approach 3: Use array index as fallback (NOT RECOMMENDED for production)
+      else if (employee?.index !== undefined) {
+        employeeIdentifier = employee.index + 1;
+        identifierType = 'array_index';
+      }
+      // No identifier found
+      else {
+        console.error('❌ No employee identifier found:', employee);
+        toast.error('Hodim identifikatori topilmadi');
+        return;
+      }
+      
+      console.log('✅ Using employee identifier:', {
+        identifier: employeeIdentifier,
+        type: identifierType,
+        employee: employee
+      });
+      
+      setIsLoadingHistory(true);
+      setSelectedEmployeeId(typeof employeeIdentifier === 'number' ? employeeIdentifier : null);
+      setSelectedEmployeeName(employee.name || 'Noma\'lum hodim');
+      setSelectedEmployeeNo(employee.employee_no || '');
+      setShowHistoryModal(true);
+      
+      console.log(`📅 Loading history for employee ${employeeIdentifier} on ${selectedDate}`);
+      
+      // Call the API to get employee history
+      const history = await apiService.getEmployeeHistory(selectedDate, employeeIdentifier as number);
+      console.log('📊 Employee history API response:', history);
+      
+      setEmployeeHistory(history);
+      
+      toast.success(`${employee.name}ning kunlik tarixi yuklandi: ${history.length} ta tadbir`);
+    } catch (error: any) {
+      console.error('❌ Failed to load employee history:', error);
+      
+      // More specific error messages
+      let errorMessage = 'Hodim tarixini yuklab bo\'lmadi';
+      
+      if (error.message?.includes('Noto\'g\'ri hodim ID si')) {
+        errorMessage = 'Noto\'g\'ri hodim ID si';
+      } else if (error.message?.includes('Sana kiritilmagan')) {
+        errorMessage = 'Sana kiritilmagan';
+      } else if (error.status === 404) {
+        errorMessage = 'Ushbu sana uchun hodim tarixi topilmadi';
+      } else if (error.status === 400) {
+        errorMessage = 'Noto\'g\'ri so\'rov parametrlari';
+      } else if (error.message?.includes('Cannot read properties')) {
+        errorMessage = 'Hodim ma\'lumotlarida xatolik';
+      } else if (error.message?.includes('Network Error')) {
+        errorMessage = 'Internet aloqasi yo\'q';
+      }
+      
+      toast.error(errorMessage);
+      setEmployeeHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Test employee history API directly
+  const testEmployeeHistoryAPI = async () => {
+    const testDate = selectedDate;
+    const testEmployeeId = 1; // Change this to a known employee ID in your system
+    
+    console.log('🧪 Testing employee history API directly...');
+    console.log('📅 Test date:', testDate);
+    console.log('👤 Test employee ID:', testEmployeeId);
+    
+    try {
+      // Direct fetch to test the endpoint
+      const response = await fetch(
+        `https://45.55.129.34/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
+        {
+          headers: {
+            'Authorization': `Bearer ${apiService.getAccessToken()}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+      
+      console.log('🔧 Raw API response status:', response.status);
+      const text = await response.text();
+      console.log('🔧 Raw API response text:', text);
+      
+      if (response.ok) {
+        const data = JSON.parse(text);
+        console.log('✅ API test successful:', data);
+        toast.success(`API ishlayapti: ${data.length} ta natija`);
+      } else {
+        console.error('❌ API error:', response.status, text);
+        toast.error(`API xatosi: ${response.status} - ${text}`);
+      }
+    } catch (error) {
+      console.error('❌ API test failed:', error);
+      toast.error('API test amalga oshirilmadi');
+    }
+  };
+
+  // Close history modal
+  const closeHistoryModal = () => {
+    setShowHistoryModal(false);
+    setSelectedEmployeeId(null);
+    setSelectedEmployeeName('');
+    setSelectedEmployeeNo('');
+    setEmployeeHistory([]);
+    setHistoryFilter('all');
+  };
+
+  // Filter employee history based on label_name
+  const getFilteredHistory = () => {
+    if (historyFilter === 'all') return employeeHistory;
+    
+    return employeeHistory.filter(record => {
+      const label = record.label_name.toLowerCase();
+      if (historyFilter === 'kirish') {
+        return label.includes('kirish') || label.includes('keldi') || label.includes('enter') || label.includes('in');
+      }
+      if (historyFilter === 'chiqish') {
+        return label.includes('chiqish') || label.includes('ketdi') || label.includes('exit') || label.includes('out');
+      }
+      return true;
+    });
+  };
+
+  // Extract kirish and chiqish times from history
+  const getEmployeeTimesFromHistory = (history: EmployeeHistory[]) => {
+    let kirish = null;
+    let chiqish = null;
+    let kirishEvents: EmployeeHistory[] = [];
+    let chiqishEvents: EmployeeHistory[] = [];
+    
+    // Sort by time first
+    const sortedHistory = [...history].sort((a, b) => 
+      new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
+    );
+    
+    sortedHistory.forEach(record => {
+      const label = record.label_name.toLowerCase();
+      
+      // Identify kirish events
+      if (label.includes('kirish') || label.includes('keldi') || label.includes('enter') || label.includes('in')) {
+        kirishEvents.push(record);
+      }
+      
+      // Identify chiqish events
+      if (label.includes('chiqish') || label.includes('ketdi') || label.includes('exit') || label.includes('out')) {
+        chiqishEvents.push(record);
+      }
+    });
+    
+    // Get earliest kirish
+    if (kirishEvents.length > 0) {
+      const earliestKirish = kirishEvents.sort((a, b) => 
+        new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
+      )[0];
+      kirish = formatTimeFromISO(earliestKirish.event_time);
+    }
+    
+    // Get latest chiqish
+    if (chiqishEvents.length > 0) {
+      const latestChiqish = chiqishEvents.sort((a, b) => 
+        new Date(b.event_time).getTime() - new Date(a.event_time).getTime()
+      )[0];
+      chiqish = formatTimeFromISO(latestChiqish.event_time);
+    }
+    
+    return { kirish, chiqish, kirishEvents, chiqishEvents };
+  };
+
+  // 🔄 REFRESH WITH SYNC FUNCTIONALITY
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
@@ -86,10 +328,8 @@ export function DashboardPage() {
         try {
           console.log('🔄 Syncing events with devices...');
 
-          // Step 1: Sync events with devices (TODAY only)
-          const syncResult = await apiService.syncEvents(
-            
-          );
+          // Step 1: Sync events with devices
+          const syncResult = await apiService.syncEvents();
           console.log('✅ Sync result:', syncResult);
 
           if (syncResult.success) {
@@ -130,7 +370,7 @@ export function DashboardPage() {
             );
           } catch (fetchError) {
             toast.error("Ikkala operatsiya ham amalga oshirilmadi");
-            throw syncError; // Re-throw the original error
+            throw syncError;
           }
         }
       }
@@ -155,6 +395,9 @@ export function DashboardPage() {
   // Date change handler
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
+    if (showHistoryModal) {
+      closeHistoryModal();
+    }
     loadAttendance(date);
   };
 
@@ -221,11 +464,26 @@ export function DashboardPage() {
   // Get status badge
   const getStatusBadge = (employee: DailyAttendance['employees'][0]) => {
     if (employee.kirish === null) {
-      return <Badge variant="secondary">Kelmadi</Badge>;
+      return (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <XCircle className="h-3 w-3" />
+          Kelmadi
+        </Badge>
+      );
     } else if (employee.late !== '0:00' && employee.late !== '0') {
-      return <Badge variant="destructive">Kechikdi</Badge>;
+      return (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Kechikdi
+        </Badge>
+      );
     } else {
-      return <Badge variant="default">Keldi</Badge>;
+      return (
+        <Badge variant="default" className="flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Keldi
+        </Badge>
+      );
     }
   };
 
@@ -235,10 +493,48 @@ export function DashboardPage() {
     return <span className="font-medium">{time}</span>;
   };
 
+  // Format date for display
+  const formatDisplayDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('uz-UZ', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Format time for history table
+  const formatHistoryTimeDisplay = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium">
+            {date.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            })}
+          </span>
+          <span className="text-xs text-gray-500">
+            {date.toLocaleDateString('uz-UZ')}
+          </span>
+        </div>
+      );
+    } catch (error) {
+      return <span className="text-gray-400">—</span>;
+    }
+  };
+
   // Initial load
   useEffect(() => {
     loadAttendance(selectedDate);
   }, []);
+
+  const filteredHistory = getFilteredHistory();
+  const timesFromHistory = getEmployeeTimesFromHistory(employeeHistory);
 
   return (
     <div className="space-y-6">
@@ -256,11 +552,12 @@ export function DashboardPage() {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={handleRefresh}
             disabled={isRefreshing}
+            className="flex-1 sm:flex-none"
           >
             <RefreshCw
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -269,14 +566,12 @@ export function DashboardPage() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => {
-              // Open sync modal for custom date range
-              toast.info("Boshqa sana oralig'i uchun iltimos, sana tanlang");
-            }}
-            title="Boshqa sanalar uchun tadbirlarni yuklash"
+            onClick={testEmployeeHistoryAPI}
+            className="flex-1 sm:flex-none"
+            title="Employee History API ni test qilish"
           >
-            <Download className="mr-2 h-4 w-4" />
-            Qurilmalardan yuklash
+            <History className="mr-2 h-4 w-4" />
+            Test API
           </Button>
         </div>
       </div>
@@ -389,17 +684,6 @@ export function DashboardPage() {
                     ? "Qidiruv natijasi topilmadi"
                     : "Bu sana uchun davomat ma'lumotlari topilmadi"}
                 </p>
-                {!searchQuery && statusFilter === 'all' && (
-                  <Button 
-                    variant="outline"
-                    onClick={handleRefresh}
-                    className="mt-2"
-                    disabled={isRefreshing}
-                  >
-                    <ArrowDownUp className="mr-2 h-4 w-4" />
-                    Qurilmalardan tadbirlarni yuklash
-                  </Button>
-                )}
               </div>
             ) : (
               <Table>
@@ -411,11 +695,12 @@ export function DashboardPage() {
                     <TableHead>Chiqish</TableHead>
                     <TableHead>Kechikish</TableHead>
                     <TableHead>Holat</TableHead>
+                    <TableHead>Amallar</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEmployees.map((employee) => (
-                    <TableRow key={employee.id}>
+                  {filteredEmployees.map((employee, index) => (
+                    <TableRow key={employee.employee_no || index}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
@@ -457,6 +742,23 @@ export function DashboardPage() {
                       <TableCell>
                         {getStatusBadge(employee)}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => loadEmployeeHistory({...employee, index})}
+                          disabled={isLoadingHistory}
+                          title={`${employee.name}ning kunlik tarixini ko'rish`}
+                          className="whitespace-nowrap"
+                        >
+                          {isLoadingHistory && selectedEmployeeId === (employee.id || employee.employee_no) ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <History className="h-4 w-4 mr-2" />
+                          )}
+                          Tarixni ko'rish
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -475,11 +777,253 @@ export function DashboardPage() {
               </span>
             </div>
             <div className="text-xs">
-              Sana: {selectedDate}
+              Sana: {selectedDate} • {filteredEmployees.length} ta hodim
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Employee History Modal - Full Screen */}
+      <AnimatePresence>
+        {showHistoryModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="absolute inset-0 bg-background">
+                <div className="h-full flex flex-col">
+                  {/* Modal Header */}
+                  <div className="border-b px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={closeHistoryModal}
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                      <div>
+                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                          <History className="h-6 w-6" />
+                          Hodim Tarixi
+                        </h2>
+                        <p className="text-gray-500 flex items-center gap-2 mt-1">
+                          <User className="h-4 w-4" />
+                          {selectedEmployeeName} • {selectedEmployeeNo} • {formatDisplayDate(selectedDate)}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={closeHistoryModal}
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="flex-1 overflow-auto p-6">
+                    {isLoadingHistory ? (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                        <p className="text-lg">Hodim tarixi yuklanmoqda...</p>
+                        <p className="text-gray-500 mt-2">
+                          {selectedEmployeeName} uchun {selectedDate} sanasi tarixi olinmoqda
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="max-w-6xl mx-auto space-y-6">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm text-gray-500">Jami Tadbirlar</p>
+                                  <p className="text-3xl font-bold mt-1">{employeeHistory.length}</p>
+                                </div>
+                                <div className="p-3 rounded-full bg-blue-50">
+                                  <Clock4 className="h-6 w-6 text-blue-600" />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm text-gray-500">Kirish Vaqti</p>
+                                  <p className="text-2xl font-bold mt-1">
+                                    {timesFromHistory.kirish || '—'}
+                                  </p>
+                                </div>
+                                <div className="p-3 rounded-full bg-green-50">
+                                  <DoorOpen className="h-6 w-6 text-green-600" />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm text-gray-500">Chiqish Vaqti</p>
+                                  <p className="text-2xl font-bold mt-1">
+                                    {timesFromHistory.chiqish || '—'}
+                                  </p>
+                                </div>
+                                <div className="p-3 rounded-full bg-red-50">
+                                  <DoorClosed className="h-6 w-6 text-red-600" />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold">Tadbirlar Ro'yxati</h3>
+                            <p className="text-gray-500">
+                              Filtr natijasi: {filteredHistory.length} ta tadbir
+                            </p>
+                          </div>
+                          <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue placeholder="Tadbir turi" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Barcha tadbirlar</SelectItem>
+                              <SelectItem value="kirish">Kirishlar ({timesFromHistory.kirishEvents?.length || 0})</SelectItem>
+                              <SelectItem value="chiqish">Chiqishlar ({timesFromHistory.chiqishEvents?.length || 0})</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Events Table */}
+                        {filteredHistory.length === 0 ? (
+                          <div className="text-center py-12 border rounded-lg">
+                            <History className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                            <p className="text-gray-500 text-lg">
+                              {historyFilter !== 'all' 
+                                ? `Ushbu turdagi tadbirlar topilmadi` 
+                                : `${selectedEmployeeName} uchun ${selectedDate} sanasida tadbirlar topilmadi`}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-20">#</TableHead>
+                                  <TableHead>Tadbir Nomi</TableHead>
+                                  <TableHead>Vaqti</TableHead>
+                                  <TableHead>Sana</TableHead>
+                                  <TableHead>Turi</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {filteredHistory.map((record, index) => (
+                                  <TableRow key={record.id}>
+                                    <TableCell className="font-medium">{index + 1}</TableCell>
+                                    <TableCell>
+                                      <span className="font-medium">{record.label_name}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                      {formatHistoryTimeDisplay(record.event_time)}
+                                    </TableCell>
+                                    <TableCell>
+                                      {new Date(record.event_time).toLocaleDateString('uz-UZ')}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge 
+                                        variant={
+                                          record.label_name.toLowerCase().includes('kirish') ? 'default' :
+                                          record.label_name.toLowerCase().includes('chiqish') ? 'destructive' :
+                                          'secondary'
+                                        }
+                                      >
+                                        {record.label_name.toLowerCase().includes('kirish') ? 'Kirish' :
+                                         record.label_name.toLowerCase().includes('chiqish') ? 'Chiqish' :
+                                         'Boshqa'}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+
+                        {/* Debug info */}
+                        <details className="mt-6 border rounded-lg p-4">
+                          <summary className="cursor-pointer text-sm text-gray-500 mb-2 font-medium">
+                            Debug Ma'lumotlari
+                          </summary>
+                          <div className="space-y-2 text-sm">
+                            <div>
+                              <span className="font-medium">Hodim ID:</span> {selectedEmployeeId}
+                            </div>
+                            <div>
+                              <span className="font-medium">Sana:</span> {selectedDate}
+                            </div>
+                            <div>
+                              <span className="font-medium">API Endpoint:</span> /person/employee-history/?date={selectedDate}&employee_id={selectedEmployeeId}&user_id=2
+                            </div>
+                            <div>
+                              <span className="font-medium">Jami Recordlar:</span> {employeeHistory.length}
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="border-t px-6 py-4 flex justify-between gap-2">
+                    <div className="text-sm text-gray-500">
+                      {employeeHistory.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          <span>{filteredHistory.length} ta tadbir ko'rsatilmoqda</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={closeHistoryModal}
+                      >
+                        Yopish
+                      </Button>
+                      {employeeHistory.length > 0 && (
+                        <Button
+                          onClick={() => {
+                            // Function to export history
+                            toast.info("Export funksiyasi tez orada qo'shiladi");
+                          }}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Yuklab olish
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
