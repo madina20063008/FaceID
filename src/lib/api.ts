@@ -55,16 +55,17 @@ export interface Employee {
   updated_at?: string;
 }
 
+// In api.ts, update the interface to match the actual API response
 export interface DailyAttendance {
   date: string;
   employees: Array<{
-    id: number;
+    employee_id: number; // ✅ Changed from 'id' to 'employee_id'
     employee_no: string;
     name: string;
     kirish: string | null;
     chiqish: string | null;
-    late: string;  // "0:00" formatida
-    face: string;  // URL
+    late: string;
+    face: string;
   }>;
   stats: {
     total: number;
@@ -197,9 +198,9 @@ class ApiService {
     }
     return this.refreshTokenString;
   }
-// Updated getEmployeeHistory method with date filtering
+// In api.ts, update getEmployeeHistory method:
 async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHistory[]> {
-  console.log(`📅 Fetching employee history for employee ${employeeId} on ${date}...`);
+  console.log(`📅 Fetching employee history for employee ID: ${employeeId} on ${date}...`);
   
   try {
     // Validate parameters
@@ -213,10 +214,10 @@ async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHist
     
     console.log('✅ Parameters validated:', { date, employeeId });
     
-    // Build query parameters - EXACT: API expects these parameter names
+    // Build query parameters - Use employee_id parameter
     const params = new URLSearchParams();
-    params.append('date', date);           // Tanlangan sana
-    params.append('employee_id', employeeId.toString()); // Hodim ID
+    params.append('date', date);           // Selected date
+    params.append('employee_id', employeeId.toString()); // Employee ID (CRITICAL CHANGE)
     params.append('user_id', this.USER_ID.toString());   // User ID
     
     const endpoint = `/person/employee-history/?${params.toString()}`;
@@ -225,17 +226,6 @@ async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHist
     // Fetch data from API
     const response = await this.request<EmployeeHistory[]>(endpoint);
     console.log(`✅ Loaded ${response.length} history records`);
-    
-    // Agar backend barcha sanalarni qaytarsa, frontendda filter qilish
-    if (response.length > 0) {
-      const filteredByDate = response.filter(record => {
-        const recordDate = record.event_time.split('T')[0]; // "2025-12-20T08:19:05+05:00" -> "2025-12-20"
-        return recordDate === date;
-      });
-      
-      console.log(`📊 Filtered to ${filteredByDate.length} records for date ${date}`);
-      return filteredByDate;
-    }
     
     return response;
   } catch (error) {

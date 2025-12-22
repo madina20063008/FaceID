@@ -1,10 +1,25 @@
-import { useState, useEffect } from 'react';
-import { apiService, DailyAttendance, formatDate, EventSyncResponse, EmployeeHistory } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../app/components/ui/card';
-import { Input } from '../app/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '../app/components/ui/avatar';
-import { Badge } from '../app/components/ui/badge';
-import { Button } from '../app/components/ui/button';
+import { useState, useEffect } from "react";
+import {
+  apiService,
+  DailyAttendance,
+  formatDate,
+  EventSyncResponse,
+  EmployeeHistory,
+} from "../lib/api";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../app/components/ui/card";
+import { Input } from "../app/components/ui/input";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "../app/components/ui/avatar";
+import { Badge } from "../app/components/ui/badge";
+import { Button } from "../app/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,34 +27,52 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../app/components/ui/table';
+} from "../app/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../app/components/ui/select';
-import { 
-  Users, UserCheck, Clock, UserX, Calendar, Search, RefreshCw,
-  AlertCircle, Database, Download, History, Filter,
-  DoorOpen, DoorClosed, X, Clock4, User,
-  ArrowLeft, Loader2, Eye, CheckCircle, XCircle
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { toast } from 'sonner';
+} from "../app/components/ui/select";
+import {
+  Users,
+  UserCheck,
+  Clock,
+  UserX,
+  Calendar,
+  Search,
+  RefreshCw,
+  AlertCircle,
+  Database,
+  Download,
+  History,
+  Filter,
+  DoorOpen,
+  DoorClosed,
+  X,
+  Clock4,
+  User,
+  ArrowLeft,
+  Loader2,
+  Eye,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 
 // Helper function to format time from ISO string
 const formatTimeFromISO = (isoString: string): string => {
   try {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
     });
   } catch (error) {
-    console.error('Error formatting time:', error);
+    console.error("Error formatting time:", error);
     return isoString;
   }
 };
@@ -47,36 +80,41 @@ const formatTimeFromISO = (isoString: string): string => {
 export function DashboardPage() {
   // Format today's date as YYYY-MM-DD
   const formattedToday = formatDate(new Date());
-  
+
   const [selectedDate, setSelectedDate] = useState(formattedToday);
   const [attendance, setAttendance] = useState<DailyAttendance | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
-  
+
   // Employee History States
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
-  const [selectedEmployeeName, setSelectedEmployeeName] = useState<string>('');
-  const [selectedEmployeeNo, setSelectedEmployeeNo] = useState<string>('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
+    null
+  );
+  const [selectedEmployeeName, setSelectedEmployeeName] = useState<string>("");
+  const [selectedEmployeeNo, setSelectedEmployeeNo] = useState<string>("");
   const [employeeHistory, setEmployeeHistory] = useState<EmployeeHistory[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [historyFilter, setHistoryFilter] = useState<string>('all'); // 'all', 'kirish', 'chiqish'
+  const [historyFilter, setHistoryFilter] = useState<string>("all"); // 'all', 'kirish', 'chiqish'
 
   // Debug: Check employee data structure
   useEffect(() => {
     if (attendance && attendance.employees.length > 0) {
-      console.log('🔍 Employee data structure check:');
-      console.log('First employee:', attendance.employees[0]);
-      console.log('All employee IDs:', attendance.employees.map(emp => ({
-        id: emp.id,
-        employee_no: emp.employee_no,
-        name: emp.name,
-        hasId: !!emp.id,
-        hasEmployeeNo: !!emp.employee_no
-      })));
+      console.log("🔍 Employee data structure check:");
+      console.log("First employee:", attendance.employees[0]);
+      console.log(
+        "All employee IDs:",
+        attendance.employees.map((emp) => ({
+          id: emp.id,
+          employee_no: emp.employee_no,
+          name: emp.name,
+          hasId: !!emp.id,
+          hasEmployeeNo: !!emp.employee_no,
+        }))
+      );
     }
   }, [attendance]);
 
@@ -84,118 +122,106 @@ export function DashboardPage() {
   const loadAttendance = async (date?: string) => {
     try {
       setIsLoading(true);
-      console.log('📊 Loading attendance for date:', date || selectedDate);
-      
+      console.log("📊 Loading attendance for date:", date || selectedDate);
+
       const dateToLoad = date || selectedDate;
-      
+
       try {
         const attendanceData = await apiService.getDailyAttendance(dateToLoad);
         setAttendance(attendanceData);
-        
+
         // Check if using mock data
-        if (attendanceData.employees.length > 0 && 
-            attendanceData.employees[0]?.employee_no?.startsWith('EMP')) {
+        if (
+          attendanceData.employees.length > 0 &&
+          attendanceData.employees[0]?.employee_no?.startsWith("EMP")
+        ) {
           setUseMockData(true);
         } else {
           setUseMockData(false);
         }
-        
-        toast.success(`Davomat ma'lumotlari yuklandi: ${attendanceData.stats.came} ta kelgan`);
+
+        toast.success(
+          `Davomat ma'lumotlari yuklandi: ${attendanceData.stats.came} ta kelgan`
+        );
       } catch (apiError) {
-        console.error('API error:', apiError);
-        toast.warning("API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda.");
+        console.error("API error:", apiError);
+        toast.warning(
+          "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda."
+        );
       }
     } catch (error) {
-      console.error('❌ Failed to load attendance:', error);
-      toast.error('Davomat ma\'lumotlarini yuklab bo\'lmadi');
+      console.error("❌ Failed to load attendance:", error);
+      toast.error("Davomat ma'lumotlarini yuklab bo'lmadi");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // FIXED: Load employee history with proper identifier handling
   const loadEmployeeHistory = async (employee: any) => {
     try {
-      console.log('🔍 Starting to load employee history...');
-      console.log('📋 Employee object received:', employee);
-      
-      // Get employee identifier - try multiple approaches
-      let employeeIdentifier: number | string | undefined;
-      let identifierType = '';
-      
-      // Approach 1: Use direct id if available
-      if (employee?.id !== undefined && employee.id !== null && !isNaN(employee.id)) {
-        employeeIdentifier = Number(employee.id);
-        identifierType = 'direct_id';
-      } 
-      // Approach 2: Extract from employee_no (e.g., "123" or "EMP001")
-      else if (employee?.employee_no) {
-        console.log('🔄 Extracting ID from employee_no:', employee.employee_no);
-        
-        // Try to extract numbers from employee_no
-        const match = employee.employee_no.match(/\d+/);
-        if (match) {
-          employeeIdentifier = parseInt(match[0]);
-          identifierType = 'extracted_from_employee_no';
-        } else {
-          // If no numbers, use the whole string
-          employeeIdentifier = employee.employee_no;
-          identifierType = 'employee_no_string';
-        }
-      }
-      // Approach 3: Use array index as fallback (NOT RECOMMENDED for production)
-      else if (employee?.index !== undefined) {
-        employeeIdentifier = employee.index + 1;
-        identifierType = 'array_index';
-      }
-      // No identifier found
-      else {
-        console.error('❌ No employee identifier found:', employee);
-        toast.error('Hodim identifikatori topilmadi');
+      console.log("🔍 Starting to load employee history...");
+      console.log("📋 Employee object received:", employee);
+
+      // ✅ Use employee.employee_id (this is 9 in your data)
+      const employeeId = employee?.employee_id;
+
+      // Validate employee ID
+      if (!employeeId || isNaN(employeeId)) {
+        console.error("❌ Invalid employee ID:", employeeId);
+        console.error("❌ Full employee object:", employee);
+        toast.error(`Hodim ID si noto'g'ri: ${employeeId}`);
         return;
       }
-      
-      console.log('✅ Using employee identifier:', {
-        identifier: employeeIdentifier,
-        type: identifierType,
-        employee: employee
+
+      console.log("✅ Valid employee ID found:", {
+        employee_id: employeeId,
+        name: employee.name,
+        employee_no: employee.employee_no,
+        type: typeof employeeId,
       });
-      
+
       setIsLoadingHistory(true);
-      setSelectedEmployeeId(typeof employeeIdentifier === 'number' ? employeeIdentifier : null);
-      setSelectedEmployeeName(employee.name || 'Noma\'lum hodim');
-      setSelectedEmployeeNo(employee.employee_no || '');
+      setSelectedEmployeeId(employeeId);
+      setSelectedEmployeeName(employee.name || "Noma'lum hodim");
+      setSelectedEmployeeNo(employee.employee_no || "");
       setShowHistoryModal(true);
-      
-      console.log(`📅 Loading history for employee ${employeeIdentifier} on ${selectedDate}`);
-      
-      // Call the API to get employee history
-      const history = await apiService.getEmployeeHistory(selectedDate, employeeIdentifier as number);
-      console.log('📊 Employee history API response:', history);
-      
+
+      console.log(
+        `📅 Loading history for employee ID ${employeeId} on ${selectedDate}`
+      );
+
+      // Call the API with employee.employee_id (e.g., 9)
+      const history = await apiService.getEmployeeHistory(
+        selectedDate,
+        employeeId
+      );
+      console.log("📊 Employee history API response:", history);
+
       setEmployeeHistory(history);
-      
-      toast.success(`${employee.name}ning kunlik tarixi yuklandi: ${history.length} ta tadbir`);
+
+      toast.success(
+        `${employee.name}ning kunlik tarixi yuklandi: ${history.length} ta tadbir`
+      );
     } catch (error: any) {
-      console.error('❌ Failed to load employee history:', error);
-      
+      console.error("❌ Failed to load employee history:", error);
+
       // More specific error messages
-      let errorMessage = 'Hodim tarixini yuklab bo\'lmadi';
-      
-      if (error.message?.includes('Noto\'g\'ri hodim ID si')) {
-        errorMessage = 'Noto\'g\'ri hodim ID si';
-      } else if (error.message?.includes('Sana kiritilmagan')) {
-        errorMessage = 'Sana kiritilmagan';
+      let errorMessage = "Hodim tarixini yuklab bo'lmadi";
+
+      if (error.message?.includes("Noto'g'ri hodim ID si")) {
+        errorMessage = "Noto'g'ri hodim ID si";
+      } else if (error.message?.includes("Sana kiritilmagan")) {
+        errorMessage = "Sana kiritilmagan";
       } else if (error.status === 404) {
-        errorMessage = 'Ushbu sana uchun hodim tarixi topilmadi';
+        errorMessage = "Ushbu sana uchun hodim tarixi topilmadi";
       } else if (error.status === 400) {
-        errorMessage = 'Noto\'g\'ri so\'rov parametrlari';
-      } else if (error.message?.includes('Cannot read properties')) {
-        errorMessage = 'Hodim ma\'lumotlarida xatolik';
-      } else if (error.message?.includes('Network Error')) {
-        errorMessage = 'Internet aloqasi yo\'q';
+        errorMessage = "Noto'g'ri so'rov parametrlari";
+      } else if (error.message?.includes("Cannot read properties")) {
+        errorMessage = "Hodim ma'lumotlarida xatolik";
+      } else if (error.message?.includes("Network Error")) {
+        errorMessage = "Internet aloqasi yo'q";
       }
-      
+
       toast.error(errorMessage);
       setEmployeeHistory([]);
     } finally {
@@ -203,43 +229,48 @@ export function DashboardPage() {
     }
   };
 
-  // Test employee history API directly
   const testEmployeeHistoryAPI = async () => {
     const testDate = selectedDate;
-    const testEmployeeId = 1; // Change this to a known employee ID in your system
-    
-    console.log('🧪 Testing employee history API directly...');
-    console.log('📅 Test date:', testDate);
-    console.log('👤 Test employee ID:', testEmployeeId);
-    
+    // Use employee_id from your data
+    const testEmployeeId = attendance?.employees[0]?.employee_id || 9;
+    const testEmployeeName = attendance?.employees[0]?.name || "Islom";
+
+    console.log("🧪 Testing employee history API...");
+    console.log("📅 Test date:", testDate);
+    console.log("👤 Test employee:", {
+      employee_id: testEmployeeId,
+      name: testEmployeeName,
+    });
+
     try {
-      // Direct fetch to test the endpoint
       const response = await fetch(
         `https://45.55.129.34/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
         {
           headers: {
-            'Authorization': `Bearer ${apiService.getAccessToken()}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
+            Authorization: `Bearer ${apiService.getAccessToken()}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
         }
       );
-      
-      console.log('🔧 Raw API response status:', response.status);
+
+      console.log("🔧 Raw API response status:", response.status);
       const text = await response.text();
-      console.log('🔧 Raw API response text:', text);
-      
+      console.log("🔧 Raw API response text:", text);
+
       if (response.ok) {
         const data = JSON.parse(text);
-        console.log('✅ API test successful:', data);
-        toast.success(`API ishlayapti: ${data.length} ta natija`);
+        console.log("✅ API test successful:", data);
+        toast.success(
+          `${testEmployeeName} uchun ${data.length} ta tadbir topildi`
+        );
       } else {
-        console.error('❌ API error:', response.status, text);
-        toast.error(`API xatosi: ${response.status} - ${text}`);
+        console.error("❌ API error:", response.status, text);
+        toast.error(`API xatosi: ${response.status}`);
       }
     } catch (error) {
-      console.error('❌ API test failed:', error);
-      toast.error('API test amalga oshirilmadi');
+      console.error("❌ API test failed:", error);
+      toast.error("API test amalga oshirilmadi");
     }
   };
 
@@ -247,23 +278,33 @@ export function DashboardPage() {
   const closeHistoryModal = () => {
     setShowHistoryModal(false);
     setSelectedEmployeeId(null);
-    setSelectedEmployeeName('');
-    setSelectedEmployeeNo('');
+    setSelectedEmployeeName("");
+    setSelectedEmployeeNo("");
     setEmployeeHistory([]);
-    setHistoryFilter('all');
+    setHistoryFilter("all");
   };
 
   // Filter employee history based on label_name
   const getFilteredHistory = () => {
-    if (historyFilter === 'all') return employeeHistory;
-    
-    return employeeHistory.filter(record => {
+    if (historyFilter === "all") return employeeHistory;
+
+    return employeeHistory.filter((record) => {
       const label = record.label_name.toLowerCase();
-      if (historyFilter === 'kirish') {
-        return label.includes('kirish') || label.includes('keldi') || label.includes('enter') || label.includes('in');
+      if (historyFilter === "kirish") {
+        return (
+          label.includes("kirish") ||
+          label.includes("keldi") ||
+          label.includes("enter") ||
+          label.includes("in")
+        );
       }
-      if (historyFilter === 'chiqish') {
-        return label.includes('chiqish') || label.includes('ketdi') || label.includes('exit') || label.includes('out');
+      if (historyFilter === "chiqish") {
+        return (
+          label.includes("chiqish") ||
+          label.includes("ketdi") ||
+          label.includes("exit") ||
+          label.includes("out")
+        );
       }
       return true;
     });
@@ -275,42 +316,55 @@ export function DashboardPage() {
     let chiqish = null;
     let kirishEvents: EmployeeHistory[] = [];
     let chiqishEvents: EmployeeHistory[] = [];
-    
+
     // Sort by time first
-    const sortedHistory = [...history].sort((a, b) => 
-      new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
+    const sortedHistory = [...history].sort(
+      (a, b) =>
+        new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
     );
-    
-    sortedHistory.forEach(record => {
+
+    sortedHistory.forEach((record) => {
       const label = record.label_name.toLowerCase();
-      
+
       // Identify kirish events
-      if (label.includes('kirish') || label.includes('keldi') || label.includes('enter') || label.includes('in')) {
+      if (
+        label.includes("kirish") ||
+        label.includes("keldi") ||
+        label.includes("enter") ||
+        label.includes("in")
+      ) {
         kirishEvents.push(record);
       }
-      
+
       // Identify chiqish events
-      if (label.includes('chiqish') || label.includes('ketdi') || label.includes('exit') || label.includes('out')) {
+      if (
+        label.includes("chiqish") ||
+        label.includes("ketdi") ||
+        label.includes("exit") ||
+        label.includes("out")
+      ) {
         chiqishEvents.push(record);
       }
     });
-    
+
     // Get earliest kirish
     if (kirishEvents.length > 0) {
-      const earliestKirish = kirishEvents.sort((a, b) => 
-        new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
+      const earliestKirish = kirishEvents.sort(
+        (a, b) =>
+          new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
       )[0];
       kirish = formatTimeFromISO(earliestKirish.event_time);
     }
-    
+
     // Get latest chiqish
     if (chiqishEvents.length > 0) {
-      const latestChiqish = chiqishEvents.sort((a, b) => 
-        new Date(b.event_time).getTime() - new Date(a.event_time).getTime()
+      const latestChiqish = chiqishEvents.sort(
+        (a, b) =>
+          new Date(b.event_time).getTime() - new Date(a.event_time).getTime()
       )[0];
       chiqish = formatTimeFromISO(latestChiqish.event_time);
     }
-    
+
     return { kirish, chiqish, kirishEvents, chiqishEvents };
   };
 
@@ -318,7 +372,7 @@ export function DashboardPage() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      console.log('🔄 Starting refresh process...');
+      console.log("🔄 Starting refresh process...");
 
       if (useMockData) {
         // In mock mode, just fetch attendance
@@ -326,11 +380,11 @@ export function DashboardPage() {
         toast.success("Davomat ma'lumotlari yangilandi (namuna rejim)");
       } else {
         try {
-          console.log('🔄 Syncing events with devices...');
+          console.log("🔄 Syncing events with devices...");
 
           // Step 1: Sync events with devices
           const syncResult = await apiService.syncEvents();
-          console.log('✅ Sync result:', syncResult);
+          console.log("✅ Sync result:", syncResult);
 
           if (syncResult.success) {
             let successMessage = `Tadbirlar sinxronizatsiya qilindi`;
@@ -356,13 +410,13 @@ export function DashboardPage() {
           }
 
           // Step 2: Fetch updated attendance list
-          console.log('📥 Fetching updated attendance data...');
+          console.log("📥 Fetching updated attendance data...");
           await loadAttendance(selectedDate);
         } catch (syncError: any) {
-          console.error('❌ Sync failed:', syncError);
+          console.error("❌ Sync failed:", syncError);
 
           // Try to fetch attendance even if sync fails
-          console.log('🔄 Attempting to fetch attendance without sync...');
+          console.log("🔄 Attempting to fetch attendance without sync...");
           try {
             await loadAttendance(selectedDate);
             toast.warning(
@@ -375,7 +429,7 @@ export function DashboardPage() {
         }
       }
     } catch (error: any) {
-      console.error('❌ Refresh failed:', error);
+      console.error("❌ Refresh failed:", error);
 
       // User-friendly error messages
       if (error.message.includes("Failed to fetch")) {
@@ -406,16 +460,17 @@ export function DashboardPage() {
     if (!attendance) return [];
 
     return attendance.employees.filter((emp) => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch =
+        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesStatus = (() => {
-        if (statusFilter === 'all') return true;
-        if (statusFilter === 'came') return emp.kirish !== null;
-        if (statusFilter === 'late') {
-          return emp.late !== '0:00' && emp.late !== '0';
+        if (statusFilter === "all") return true;
+        if (statusFilter === "came") return emp.kirish !== null;
+        if (statusFilter === "late") {
+          return emp.late !== "0:00" && emp.late !== "0";
         }
-        if (statusFilter === 'absent') return emp.kirish === null;
+        if (statusFilter === "absent") return emp.kirish === null;
         return true;
       })();
 
@@ -426,43 +481,45 @@ export function DashboardPage() {
   const filteredEmployees = getFilteredEmployees();
 
   // Calculate stats
-  const stats = attendance ? [
-    {
-      title: 'Jami hodimlar',
-      value: attendance.stats.total,
-      icon: Users,
-      color: 'bg-blue-500',
-      textColor: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-    },
-    {
-      title: 'Kelganlar',
-      value: attendance.stats.came,
-      icon: UserCheck,
-      color: 'bg-green-500',
-      textColor: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-    },
-    {
-      title: 'Kechikkanlar',
-      value: attendance.stats.late,
-      icon: Clock,
-      color: 'bg-yellow-500',
-      textColor: 'text-yellow-600',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-    },
-    {
-      title: 'Kelmaganlar',
-      value: attendance.stats.absent,
-      icon: UserX,
-      color: 'bg-red-500',
-      textColor: 'text-red-600',
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-    },
-  ] : [];
+  const stats = attendance
+    ? [
+        {
+          title: "Jami hodimlar",
+          value: attendance.stats.total,
+          icon: Users,
+          color: "bg-blue-500",
+          textColor: "text-blue-600",
+          bgColor: "bg-blue-50 dark:bg-blue-900/20",
+        },
+        {
+          title: "Kelganlar",
+          value: attendance.stats.came,
+          icon: UserCheck,
+          color: "bg-green-500",
+          textColor: "text-green-600",
+          bgColor: "bg-green-50 dark:bg-green-900/20",
+        },
+        {
+          title: "Kechikkanlar",
+          value: attendance.stats.late,
+          icon: Clock,
+          color: "bg-yellow-500",
+          textColor: "text-yellow-600",
+          bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
+        },
+        {
+          title: "Kelmaganlar",
+          value: attendance.stats.absent,
+          icon: UserX,
+          color: "bg-red-500",
+          textColor: "text-red-600",
+          bgColor: "bg-red-50 dark:bg-red-900/20",
+        },
+      ]
+    : [];
 
   // Get status badge
-  const getStatusBadge = (employee: DailyAttendance['employees'][0]) => {
+  const getStatusBadge = (employee: DailyAttendance["employees"][0]) => {
     if (employee.kirish === null) {
       return (
         <Badge variant="secondary" className="flex items-center gap-1">
@@ -470,7 +527,7 @@ export function DashboardPage() {
           Kelmadi
         </Badge>
       );
-    } else if (employee.late !== '0:00' && employee.late !== '0') {
+    } else if (employee.late !== "0:00" && employee.late !== "0") {
       return (
         <Badge variant="destructive" className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
@@ -496,11 +553,11 @@ export function DashboardPage() {
   // Format date for display
   const formatDisplayDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('uz-UZ', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return date.toLocaleDateString("uz-UZ", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -511,15 +568,15 @@ export function DashboardPage() {
       return (
         <div className="flex flex-col">
           <span className="font-medium">
-            {date.toLocaleTimeString('en-US', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-              hour12: false
+            {date.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false,
             })}
           </span>
           <span className="text-xs text-gray-500">
-            {date.toLocaleDateString('uz-UZ')}
+            {date.toLocaleDateString("uz-UZ")}
           </span>
         </div>
       );
@@ -594,7 +651,9 @@ export function DashboardPage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {stat.title}
                       </p>
-                      <p className={`text-3xl font-bold mt-1 ${stat.textColor}`}>
+                      <p
+                        className={`text-3xl font-bold mt-1 ${stat.textColor}`}
+                      >
                         {stat.value}
                       </p>
                     </div>
@@ -640,8 +699,8 @@ export function DashboardPage() {
                 disabled={isLoading || isRefreshing}
               />
             </div>
-            <Select 
-              value={statusFilter} 
+            <Select
+              value={statusFilter}
               onValueChange={setStatusFilter}
               disabled={isLoading || isRefreshing}
             >
@@ -662,14 +721,16 @@ export function DashboardPage() {
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                 <p className="mt-2 text-gray-500">
-                  {isRefreshing ? "Tadbirlar sinxronizatsiya qilinmoqda..." : "Davomat ma'lumotlari yuklanmoqda..."}
+                  {isRefreshing
+                    ? "Tadbirlar sinxronizatsiya qilinmoqda..."
+                    : "Davomat ma'lumotlari yuklanmoqda..."}
                 </p>
               </div>
             ) : !attendance ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">Ma'lumotlar topilmadi</p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => loadAttendance(selectedDate)}
                   className="mt-2"
                   disabled={isRefreshing}
@@ -680,7 +741,7 @@ export function DashboardPage() {
             ) : filteredEmployees.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500">
-                  {searchQuery || statusFilter !== 'all'
+                  {searchQuery || statusFilter !== "all"
                     ? "Qidiruv natijasi topilmadi"
                     : "Bu sana uchun davomat ma'lumotlari topilmadi"}
                 </p>
@@ -690,7 +751,6 @@ export function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Hodim</TableHead>
-                    <TableHead>Raqami</TableHead>
                     <TableHead>Kirish</TableHead>
                     <TableHead>Chiqish</TableHead>
                     <TableHead>Kechikish</TableHead>
@@ -704,11 +764,12 @@ export function DashboardPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage 
-                              src={employee.face} 
+                            <AvatarImage
+                              src={employee.face}
                               alt={employee.name}
                               onError={(e) => {
-                                e.currentTarget.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop';
+                                e.currentTarget.src =
+                                  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop";
                               }}
                             />
                             <AvatarFallback>
@@ -719,39 +780,40 @@ export function DashboardPage() {
                             <span className="font-medium block">
                               {employee.name}
                             </span>
-                            {employee.id && (
-                              <span className="text-xs text-gray-500">
-                                ID: {employee.id}
-                              </span>
-                            )}
+                            <div className="flex gap-2 text-xs text-gray-500">
+                              <span>ID: {employee.employee_id}</span>{" "}
+                              {/* Changed from employee.id */}
+                              {employee.employee_no && (
+                                <span>Raqam: {employee.employee_no}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono">
-                        {employee.employee_no}
-                      </TableCell>
-                      <TableCell>
-                        {formatTime(employee.kirish)}
-                      </TableCell>
-                      <TableCell>
-                        {formatTime(employee.chiqish)}
-                      </TableCell>
-                      <TableCell className={employee.late !== '0:00' && employee.late !== '0' ? 'text-red-600 font-medium' : 'text-green-600'}>
+
+                      <TableCell>{formatTime(employee.kirish)}</TableCell>
+                      <TableCell>{formatTime(employee.chiqish)}</TableCell>
+                      <TableCell
+                        className={
+                          employee.late !== "0:00" && employee.late !== "0"
+                            ? "text-red-600 font-medium"
+                            : "text-green-600"
+                        }
+                      >
                         {employee.late}
                       </TableCell>
-                      <TableCell>
-                        {getStatusBadge(employee)}
-                      </TableCell>
+                      <TableCell>{getStatusBadge(employee)}</TableCell>
                       <TableCell>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => loadEmployeeHistory({...employee, index})}
+                          onClick={() => loadEmployeeHistory(employee)}
                           disabled={isLoadingHistory}
                           title={`${employee.name}ning kunlik tarixini ko'rish`}
                           className="whitespace-nowrap"
                         >
-                          {isLoadingHistory && selectedEmployeeId === (employee.id || employee.employee_no) ? (
+                          {isLoadingHistory &&
+                          selectedEmployeeId === employee.employee_id ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
                             <History className="h-4 w-4 mr-2" />
@@ -765,14 +827,14 @@ export function DashboardPage() {
               </Table>
             )}
           </div>
-          
+
           {/* Data source info */}
           <div className="mt-4 text-sm text-gray-500 flex items-center justify-between">
             <div className="flex items-center">
               <Database className="h-4 w-4 mr-2" />
               <span>
-                {useMockData 
-                  ? "Namuna ma'lumotlar ishlatilmoqda" 
+                {useMockData
+                  ? "Namuna ma'lumotlar ishlatilmoqda"
                   : "Ma'lumotlar bazasidan yuklandi"}
               </span>
             </div>
@@ -817,7 +879,8 @@ export function DashboardPage() {
                         </h2>
                         <p className="text-gray-500 flex items-center gap-2 mt-1">
                           <User className="h-4 w-4" />
-                          {selectedEmployeeName} • {selectedEmployeeNo} • {formatDisplayDate(selectedDate)}
+                          {selectedEmployeeName} • {selectedEmployeeNo} •{" "}
+                          {formatDisplayDate(selectedDate)}
                         </p>
                       </div>
                     </div>
@@ -837,7 +900,8 @@ export function DashboardPage() {
                         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                         <p className="text-lg">Hodim tarixi yuklanmoqda...</p>
                         <p className="text-gray-500 mt-2">
-                          {selectedEmployeeName} uchun {selectedDate} sanasi tarixi olinmoqda
+                          {selectedEmployeeName} uchun {selectedDate} sanasi
+                          tarixi olinmoqda
                         </p>
                       </div>
                     ) : (
@@ -848,8 +912,12 @@ export function DashboardPage() {
                             <CardContent className="pt-6">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-sm text-gray-500">Jami Tadbirlar</p>
-                                  <p className="text-3xl font-bold mt-1">{employeeHistory.length}</p>
+                                  <p className="text-sm text-gray-500">
+                                    Jami Tadbirlar
+                                  </p>
+                                  <p className="text-3xl font-bold mt-1">
+                                    {employeeHistory.length}
+                                  </p>
                                 </div>
                                 <div className="p-3 rounded-full bg-blue-50">
                                   <Clock4 className="h-6 w-6 text-blue-600" />
@@ -861,9 +929,11 @@ export function DashboardPage() {
                             <CardContent className="pt-6">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-sm text-gray-500">Kirish Vaqti</p>
+                                  <p className="text-sm text-gray-500">
+                                    Kirish Vaqti
+                                  </p>
                                   <p className="text-2xl font-bold mt-1">
-                                    {timesFromHistory.kirish || '—'}
+                                    {timesFromHistory.kirish || "—"}
                                   </p>
                                 </div>
                                 <div className="p-3 rounded-full bg-green-50">
@@ -876,9 +946,11 @@ export function DashboardPage() {
                             <CardContent className="pt-6">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="text-sm text-gray-500">Chiqish Vaqti</p>
+                                  <p className="text-sm text-gray-500">
+                                    Chiqish Vaqti
+                                  </p>
                                   <p className="text-2xl font-bold mt-1">
-                                    {timesFromHistory.chiqish || '—'}
+                                    {timesFromHistory.chiqish || "—"}
                                   </p>
                                 </div>
                                 <div className="p-3 rounded-full bg-red-50">
@@ -892,19 +964,32 @@ export function DashboardPage() {
                         {/* Filters */}
                         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                           <div>
-                            <h3 className="text-lg font-semibold">Tadbirlar Ro'yxati</h3>
+                            <h3 className="text-lg font-semibold">
+                              Tadbirlar Ro'yxati
+                            </h3>
                             <p className="text-gray-500">
                               Filtr natijasi: {filteredHistory.length} ta tadbir
                             </p>
                           </div>
-                          <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                          <Select
+                            value={historyFilter}
+                            onValueChange={setHistoryFilter}
+                          >
                             <SelectTrigger className="w-[200px]">
                               <SelectValue placeholder="Tadbir turi" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">Barcha tadbirlar</SelectItem>
-                              <SelectItem value="kirish">Kirishlar ({timesFromHistory.kirishEvents?.length || 0})</SelectItem>
-                              <SelectItem value="chiqish">Chiqishlar ({timesFromHistory.chiqishEvents?.length || 0})</SelectItem>
+                              <SelectItem value="all">
+                                Barcha tadbirlar
+                              </SelectItem>
+                              <SelectItem value="kirish">
+                                Kirishlar (
+                                {timesFromHistory.kirishEvents?.length || 0})
+                              </SelectItem>
+                              <SelectItem value="chiqish">
+                                Chiqishlar (
+                                {timesFromHistory.chiqishEvents?.length || 0})
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -914,8 +999,8 @@ export function DashboardPage() {
                           <div className="text-center py-12 border rounded-lg">
                             <History className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                             <p className="text-gray-500 text-lg">
-                              {historyFilter !== 'all' 
-                                ? `Ushbu turdagi tadbirlar topilmadi` 
+                              {historyFilter !== "all"
+                                ? `Ushbu turdagi tadbirlar topilmadi`
                                 : `${selectedEmployeeName} uchun ${selectedDate} sanasida tadbirlar topilmadi`}
                             </p>
                           </div>
@@ -934,27 +1019,47 @@ export function DashboardPage() {
                               <TableBody>
                                 {filteredHistory.map((record, index) => (
                                   <TableRow key={record.id}>
-                                    <TableCell className="font-medium">{index + 1}</TableCell>
-                                    <TableCell>
-                                      <span className="font-medium">{record.label_name}</span>
+                                    <TableCell className="font-medium">
+                                      {index + 1}
                                     </TableCell>
                                     <TableCell>
-                                      {formatHistoryTimeDisplay(record.event_time)}
+                                      <span className="font-medium">
+                                        {record.label_name}
+                                      </span>
                                     </TableCell>
                                     <TableCell>
-                                      {new Date(record.event_time).toLocaleDateString('uz-UZ')}
+                                      {formatHistoryTimeDisplay(
+                                        record.event_time
+                                      )}
                                     </TableCell>
                                     <TableCell>
-                                      <Badge 
+                                      {new Date(
+                                        record.event_time
+                                      ).toLocaleDateString("uz-UZ")}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge
                                         variant={
-                                          record.label_name.toLowerCase().includes('kirish') ? 'default' :
-                                          record.label_name.toLowerCase().includes('chiqish') ? 'destructive' :
-                                          'secondary'
+                                          record.label_name
+                                            .toLowerCase()
+                                            .includes("kirish")
+                                            ? "default"
+                                            : record.label_name
+                                                .toLowerCase()
+                                                .includes("chiqish")
+                                            ? "destructive"
+                                            : "secondary"
                                         }
                                       >
-                                        {record.label_name.toLowerCase().includes('kirish') ? 'Kirish' :
-                                         record.label_name.toLowerCase().includes('chiqish') ? 'Chiqish' :
-                                         'Boshqa'}
+                                        {record.label_name
+                                          .toLowerCase()
+                                          .includes("kirish")
+                                          ? "Kirish"
+                                          : record.label_name
+                                              .toLowerCase()
+                                              .includes("chiqish")
+                                          ? "Chiqish"
+                                          : "Boshqa"}
                                       </Badge>
                                     </TableCell>
                                   </TableRow>
@@ -971,16 +1076,24 @@ export function DashboardPage() {
                           </summary>
                           <div className="space-y-2 text-sm">
                             <div>
-                              <span className="font-medium">Hodim ID:</span> {selectedEmployeeId}
+                              <span className="font-medium">Hodim ID:</span>{" "}
+                              {selectedEmployeeId}
                             </div>
                             <div>
-                              <span className="font-medium">Sana:</span> {selectedDate}
+                              <span className="font-medium">Sana:</span>{" "}
+                              {selectedDate}
+                            </div>
+                            // Update the debug info section:
+                            <div>
+                              <span className="font-medium">API Endpoint:</span>{" "}
+                              /person/employee-history/?date={selectedDate}
+                              &employee_id={selectedEmployeeId}&user_id=2
                             </div>
                             <div>
-                              <span className="font-medium">API Endpoint:</span> /person/employee-history/?date={selectedDate}&employee_id={selectedEmployeeId}&user_id=2
-                            </div>
-                            <div>
-                              <span className="font-medium">Jami Recordlar:</span> {employeeHistory.length}
+                              <span className="font-medium">
+                                Jami Recordlar:
+                              </span>{" "}
+                              {employeeHistory.length}
                             </div>
                           </div>
                         </details>
@@ -994,22 +1107,23 @@ export function DashboardPage() {
                       {employeeHistory.length > 0 && (
                         <div className="flex items-center gap-2">
                           <Eye className="h-4 w-4" />
-                          <span>{filteredHistory.length} ta tadbir ko'rsatilmoqda</span>
+                          <span>
+                            {filteredHistory.length} ta tadbir ko'rsatilmoqda
+                          </span>
                         </div>
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={closeHistoryModal}
-                      >
+                      <Button variant="outline" onClick={closeHistoryModal}>
                         Yopish
                       </Button>
                       {employeeHistory.length > 0 && (
                         <Button
                           onClick={() => {
                             // Function to export history
-                            toast.info("Export funksiyasi tez orada qo'shiladi");
+                            toast.info(
+                              "Export funksiyasi tez orada qo'shiladi"
+                            );
                           }}
                         >
                           <Download className="mr-2 h-4 w-4" />
