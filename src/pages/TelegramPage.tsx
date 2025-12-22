@@ -430,8 +430,6 @@ const TelegramChannelPage = () => {
                   />
                 </div>
                 
-               
-                
                 {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
                 {currentUser?.role === 'superadmin' && (
                   <div>
@@ -541,7 +539,7 @@ const TelegramChannelPage = () => {
                         {formatChatId(channel.chat_id)}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {channel.chat_id.startsWith('@') ? 'Username' : 'Chat ID'}
+                        {channel.chat_id.startsWith('@') ? 'Username' : 'Chat ID'} 
                       </div>
                     </td>
                    
