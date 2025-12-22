@@ -8,8 +8,9 @@ import { LoginPage } from '../pages/LoginPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { EmployeesPage } from '../pages/EmployeesPage';
 import { ProfilePage } from '../pages/ProfilePage';
-import DevicesPage from '../pages/DevicesPage';
+import {DevicesPage} from '../pages/DevicesPage';
 import ShiftPage from '../pages/ShiftPage';
+import TelegramPage from '../pages/TelegramPage';
 
 export default function App() {
   return (
@@ -67,6 +68,16 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <ShiftPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/telegram"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TelegramPage />
                   </Layout>
                 </ProtectedRoute>
               }

@@ -169,6 +169,31 @@ export interface UpdateShiftRequest {
   user?: number;
 }
 
+// Telegram kanallari uchun interfeyslar
+export interface TelegramChannel {
+  id: number;
+  name: string;
+  chat_id: string;
+  resolved_id: string;
+  user: number; // user ID who owns this channel
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateTelegramChannelRequest {
+  name: string;
+  chat_id: string;
+  resolved_id?: string; // Optional, ishlatilmasin
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateTelegramChannelRequest {
+  name?: string;
+  chat_id?: string;
+  resolved_id?: string; // Optional, ishlatilmasin
+  user?: number;
+}
+
 // Helper function to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -425,7 +450,165 @@ async deleteShift(id: number): Promise<void> {
     throw error;
   }
 }
+// ApiService klassiga Telegram kanallari metodlarini qo'shing
 
+// Barcha Telegram kanallarini olish
+async getTelegramChannels(userId?: number): Promise<TelegramChannel[]> {
+  console.log('📢 Telegram kanallarini olish...');
+  
+  try {
+    const params = new URLSearchParams();
+    
+    // Agar user_id berilgan bo'lsa (superadmin boshqa adminning kanallarini so'rash)
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin ${userId} foydalanuvchisining Telegram kanallarini olish`);
+    } else {
+      // Oddiy admin yoki o'z kanallari uchun
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/utils/telegramchannel/${params.toString() ? '?' + params.toString() : ''}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<TelegramChannel[]>(endpoint);
+    console.log(`✅ ${response.length} ta Telegram kanali yuklandi`);
+    return response;
+  } catch (error) {
+    console.error('❌ Telegram kanallarini yuklashda xatolik:', error);
+    
+    // Demo/fallback uchun
+    console.log('🔄 Mock Telegram kanallari ma\'lumotlari ishlatilmoqda');
+    return this.getMockTelegramChannels();
+  }
+}
+
+// Yangi Telegram kanali yaratish
+async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<TelegramChannel> {
+  console.log('➕ Yangi Telegram kanali yaratish...');
+  
+  try {
+    const channelData: any = {
+      name: data.name,
+      chat_id: data.chat_id,
+      user_id: this.USER_ID, // HAR DOIM user_id yuborish kerak
+    };
+    
+    // resolved_id ni yubormaslik kerak (ishlatilmasin)
+    // if (data.resolved_id) {
+    //   channelData.resolved_id = data.resolved_id;
+    // }
+    
+    // Agar superadmin boshqa foydalanuvchiga kanal biriktirmoqchi bo'lsa
+    if (data.user && data.user !== this.USER_ID) {
+      channelData.user_id = data.user;
+      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga Telegram kanali biriktirilmoqda`);
+    }
+    
+    console.log('📦 Telegram kanali ma\'lumotlari:', channelData);
+    
+    const endpoint = `/utils/telegramchannel/`;
+    const response = await this.request<TelegramChannel>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(channelData),
+    });
+    
+    console.log('✅ Telegram kanali muvaffaqiyatli yaratildi');
+    return response;
+  } catch (error) {
+    console.error('❌ Telegram kanali yaratishda xatolik:', error);
+    throw error;
+  }
+}
+
+// Telegram kanalini yangilash
+async updateTelegramChannel(id: number, data: UpdateTelegramChannelRequest): Promise<TelegramChannel> {
+  console.log(`✏️ ${id} ID-li Telegram kanalini yangilash...`);
+  
+  try {
+    // Yangilash uchun tayyor ma'lumot
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.chat_id !== undefined) updateData.chat_id = data.chat_id;
+    
+    // resolved_id ni yangilamang (ishlatilmasin)
+    // if (data.resolved_id !== undefined) updateData.resolved_id = data.resolved_id;
+    
+    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
+    if (data.user !== undefined) {
+      updateData.user_id = data.user;
+    }
+    
+    console.log('📦 Telegram kanalini yangilash ma\'lumotlari:', updateData);
+    
+    const endpoint = `/utils/telegramchannel/${id}/`;
+    const response = await this.request<TelegramChannel>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ Telegram kanali muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li Telegram kanalini yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Telegram kanalini o'chirish
+async deleteTelegramChannel(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li Telegram kanalini o'chirish...`);
+  
+  try {
+    // O'chirish uchun user_id bilan so'rov yuborish
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/utils/telegramchannel/${id}/?${params.toString()}`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Telegram kanali muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li Telegram kanalini o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Mock Telegram kanallari ma'lumotlari (fallback uchun)
+private getMockTelegramChannels(): TelegramChannel[] {
+  return [
+    {
+      id: 1,
+      name: 'Xodimlar kanali',
+      chat_id: '@company_staff',
+      resolved_id: '123456789',
+      user: 2,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: 2,
+      name: 'Adminlar kanali',
+      chat_id: '@company_admins',
+      resolved_id: '987654321',
+      user: 2,
+      created_at: '2024-01-16T11:20:00Z',
+      updated_at: '2024-01-16T11:20:00Z'
+    },
+    {
+      id: 3,
+      name: 'Kuzatuv kanali',
+      chat_id: '@company_monitoring',
+      resolved_id: '456789123',
+      user: 3,
+      created_at: '2024-01-17T09:15:00Z',
+      updated_at: '2024-01-17T09:15:00Z'
+    }
+  ];
+}
 // Mock smena ma'lumotlari (fallback uchun)
 private getMockShifts(): Shift[] {
   return [
