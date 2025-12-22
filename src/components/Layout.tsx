@@ -22,6 +22,8 @@ import {
   Moon,
   Sun,
   Building2,
+  ScanFace,
+  Shuffle,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -37,7 +39,10 @@ export function Layout({ children }: LayoutProps) {
   const navigation = [
     { name: 'Bosh sahifa', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Hodimlar', href: '/employees', icon: Users },
+    { name: 'Qurilmalar', href: '/devices', icon: ScanFace },
+    { name: 'Smenalar', href: '/shifts', icon: Shuffle },
     { name: 'Profil', href: '/profile', icon: User },
+
   ];
 
   const isActive = (path: string) => location.pathname === path;

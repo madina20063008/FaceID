@@ -119,6 +119,56 @@ export interface EmployeeHistory {
     event_time: string,
     label_name: string
 }
+
+// In api.ts, add Device interface after other interfaces
+export interface Device {
+  id: number;
+  name: string;
+  ip: string;
+  username: string;
+  password: string;
+  status: 'active' | 'inactive' | 'error';
+  created_at: string;
+  user: number; // user ID who owns this device
+  device_type?: string;
+  port?: number;
+  serial_number?: string;
+  location?: string;
+  last_sync?: string;
+}
+
+export interface DeviceResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Device[];
+}
+
+// Smena (Shift) uchun interfeyslar
+export interface Shift {
+  id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+  user: number; // user ID who owns this shift
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateShiftRequest {
+  name: string;
+  start_time: string;
+  end_time: string;
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateShiftRequest {
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+  user?: number;
+}
+
 // Helper function to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -252,7 +302,199 @@ if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
     throw error;
   }
 }
+// ApiService klassiga quyidagi metodlarni qo'shing
 
+// ApiService klassida quyidagi metodlarni yangilaymiz:
+
+// Barcha smenalarni olish
+async getShifts(userId?: number): Promise<Shift[]> {
+  console.log('🔄 Smenalarni olish...');
+  
+  try {
+    const params = new URLSearchParams();
+    
+    // SUPERADMIN UCHUN MUHIM: user_id ni har doim yuborish kerak
+    // Agar superadmin boshqa foydalanuvchi smenalarini ko'rmoqchi bo'lsa
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin ${userId} foydalanuvchisining smenalarini olish`);
+    } else {
+      // Oddiy admin yoki o'z smenalari uchun
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/shift/${params.toString() ? '?' + params.toString() : ''}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<Shift[]>(endpoint);
+    console.log(`✅ ${response.length} ta smena yuklandi`);
+    return response;
+  } catch (error) {
+    console.error('❌ Smenalarni yuklashda xatolik:', error);
+    
+    // Demo/fallback uchun
+    console.log('🔄 Mock smena ma\'lumotlari ishlatilmoqda');
+    return this.getMockShifts();
+  }
+}
+
+// Yangi smena yaratish
+async createShift(data: CreateShiftRequest): Promise<Shift> {
+  console.log('➕ Yangi smena yaratish...');
+  
+  try {
+    const shiftData: any = {
+      name: data.name,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      user_id: this.USER_ID, // HAR DOIM user_id yuborish kerak
+    };
+    
+    // Agar superadmin boshqa foydalanuvchiga smena biriktirmoqchi bo'lsa
+    if (data.user && data.user !== this.USER_ID) {
+      shiftData.user_id = data.user;
+      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga smena biriktirilmoqda`);
+    }
+    
+    console.log('📦 Smena ma\'lumotlari:', shiftData);
+    
+    const endpoint = `/day/shift/`;
+    const response = await this.request<Shift>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(shiftData),
+    });
+    
+    console.log('✅ Smena muvaffaqiyatli yaratildi');
+    return response;
+  } catch (error) {
+    console.error('❌ Smena yaratishda xatolik:', error);
+    throw error;
+  }
+}
+
+// Smenani yangilash
+async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
+  console.log(`✏️ ${id} ID-li smenani yangilash...`);
+  
+  try {
+    // Yangilash uchun tayyor ma'lumot
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.start_time !== undefined) updateData.start_time = data.start_time;
+    if (data.end_time !== undefined) updateData.end_time = data.end_time;
+    
+    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
+    if (data.user !== undefined) {
+      updateData.user_id = data.user;
+    }
+    
+    console.log('📦 Yangilash ma\'lumotlari:', updateData);
+    
+    const endpoint = `/day/shift/${id}/`;
+    const response = await this.request<Shift>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ Smena muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li smenani yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Smenani o'chirish
+async deleteShift(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li smenani o'chirish...`);
+  
+  try {
+    // O'chirish uchun user_id bilan so'rov yuborish
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/day/shift/${id}/?${params.toString()}`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Smena muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li smenani o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Mock smena ma'lumotlari (fallback uchun)
+private getMockShifts(): Shift[] {
+  return [
+    {
+      id: 1,
+      name: 'Kunduzgi smena',
+      start_time: '09:00:00',
+      end_time: '18:00:00',
+      user: 2,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: 2,
+      name: 'Kechki smena',
+      start_time: '18:00:00',
+      end_time: '02:00:00',
+      user: 2,
+      created_at: '2024-01-16T11:20:00Z',
+      updated_at: '2024-01-16T11:20:00Z'
+    },
+    {
+      id: 3,
+      name: 'Tungi smena',
+      start_time: '22:00:00',
+      end_time: '06:00:00',
+      user: 3,
+      created_at: '2024-01-17T09:15:00Z',
+      updated_at: '2024-01-17T09:15:00Z'
+    }
+  ];
+}
+
+// Vaqtni formatlash uchun yordamchi metod
+formatTime(timeString: string): string {
+  try {
+    // "14:28:20" formatidan "14:28" formatiga o'tkazish
+    const timeParts = timeString.split(':');
+    if (timeParts.length >= 2) {
+      return `${timeParts[0]}:${timeParts[1]}`;
+    }
+    return timeString;
+  } catch (error) {
+    console.error('Vaqtni formatlashda xatolik:', error);
+    return timeString;
+  }
+}
+
+// Smena davomiyligini hisoblash
+calculateShiftDuration(startTime: string, endTime: string): string {
+  try {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    
+    // Agar tugash vaqti boshlanish vaqtidan kichik bo'lsa, keyingi kunga o'tkazamiz
+    if (end < start) {
+      end.setDate(end.getDate() + 1);
+    }
+    
+    const durationMs = end.getTime() - start.getTime();
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hours} soat ${minutes} daqiqa`;
+  } catch (error) {
+    console.error('Davomiylik hisoblashda xatolik:', error);
+    return 'Hisoblanmadi';
+  }
+}
 // Optional: Get employee history with date range
 async getEmployeeHistoryRange(
   employeeId: number, 
@@ -428,7 +670,206 @@ async syncEvents(): Promise<EventSyncResponse> {
       throw error;
     }
   }
+// In ApiService class, add these methods:
 
+// Get all devices (for superadmin) or user's own devices (for regular admin)
+async getDevices(userId?: number): Promise<Device[]> {
+  console.log('📱 Fetching devices...');
+  
+  try {
+    const params = new URLSearchParams();
+    
+    // If user_id is provided (superadmin querying another admin's devices)
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin fetching devices for user ${userId}`);
+    }
+    // Regular admin - no user_id param, will get their own devices automatically
+    
+    const endpoint = `/utils/devices/${params.toString() ? '?' + params.toString() : ''}`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    const response = await this.request<DeviceResponse | Device[]>(endpoint);
+    
+    // Handle different response formats
+    let devices: Device[];
+    if (Array.isArray(response)) {
+      devices = response;
+    } else if (response && 'results' in response) {
+      devices = response.results;
+    } else {
+      console.warn('⚠️ Unexpected device response format:', response);
+      devices = [];
+    }
+    
+    console.log(`✅ Loaded ${devices.length} devices`);
+    return devices;
+  } catch (error) {
+    console.error('❌ Failed to load devices:', error);
+    
+    // For demo/fallback purposes
+    console.log('🔄 Using mock devices data');
+    return this.getMockDevices();
+  }
+}
+
+// Get single device by ID
+async getDeviceById(id: number): Promise<Device> {
+  console.log(`📱 Fetching device ${id}...`);
+  
+  try {
+    const endpoint = `/utils/devices/${id}/`;
+    const device = await this.request<Device>(endpoint);
+    console.log('✅ Device loaded:', device.name);
+    return device;
+  } catch (error) {
+    console.error(`❌ Failed to load device ${id}:`, error);
+    throw error;
+  }
+}
+
+// Create new device
+async createDevice(data: {
+  name: string;
+  ip: string;
+  username: string;
+  password: string;
+  device_type?: string;
+  port?: number;
+  serial_number?: string;
+  location?: string;
+  user?: number; // Only for superadmin to assign to specific user
+}): Promise<Device> {
+  console.log('➕ Creating new device...');
+  
+  try {
+    const deviceData: any = {
+      name: data.name,
+      ip: data.ip,
+      username: data.username,
+      password: data.password,
+    };
+    
+    // Optional fields
+    if (data.device_type) deviceData.device_type = data.device_type;
+    if (data.port) deviceData.port = data.port;
+    if (data.serial_number) deviceData.serial_number = data.serial_number;
+    if (data.location) deviceData.location = data.location;
+    
+    // Only include user if provided (superadmin assigning to specific user)
+    if (data.user) {
+      deviceData.user = data.user;
+    }
+    
+    console.log('📦 Creating device with data:', { ...deviceData, password: '***' });
+    
+    const endpoint = `/utils/devices/`;
+    const response = await this.request<Device>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(deviceData),
+    });
+    
+    console.log('✅ Device created successfully');
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to create device:', error);
+    throw error;
+  }
+}
+
+// Update device
+async updateDevice(id: number, data: Partial<{
+  name: string;
+  ip: string;
+  username: string;
+  password: string;
+  device_type?: string;
+  port?: number;
+  serial_number?: string;
+  location?: string;
+  status?: 'active' | 'inactive' | 'error';
+}>): Promise<Device> {
+  console.log(`✏️ Updating device ${id}...`);
+  
+  try {
+    const endpoint = `/utils/devices/${id}/`;
+    const response = await this.request<Device>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    
+    console.log('✅ Device updated successfully');
+    return response;
+  } catch (error) {
+    console.error(`❌ Failed to update device ${id}:`, error);
+    throw error;
+  }
+}
+
+// Delete device
+async deleteDevice(id: number): Promise<void> {
+  console.log(`🗑️ Deleting device ${id}...`);
+  
+  try {
+    const endpoint = `/utils/devices/${id}/`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Device deleted');
+  } catch (error) {
+    console.error(`❌ Failed to delete device ${id}:`, error);
+    throw error;
+  }
+}
+
+// Mock devices for fallback
+private getMockDevices(): Device[] {
+  return [
+    {
+      id: 1,
+      name: 'Hikvision DS-2CD2143G0-I',
+      ip: '192.168.1.100',
+      username: 'admin',
+      password: 'password123',
+      status: 'active',
+      created_at: '2024-01-15T10:30:00Z',
+      user: 2,
+      device_type: 'camera',
+      port: 8000,
+      location: 'Main Entrance',
+      last_sync: '2024-01-20T15:45:00Z'
+    },
+    {
+      id: 2,
+      name: 'Dahua IPC-HDW5842H-ASE',
+      ip: '192.168.1.101',
+      username: 'admin',
+      password: 'admin123',
+      status: 'active',
+      created_at: '2024-01-16T11:20:00Z',
+      user: 2,
+      device_type: 'camera',
+      port: 37777,
+      location: 'Parking Lot',
+      last_sync: '2024-01-20T14:30:00Z'
+    },
+    {
+      id: 3,
+      name: 'AXIS M3046-V',
+      ip: '192.168.1.102',
+      username: 'root',
+      password: 'pass',
+      status: 'inactive',
+      created_at: '2024-01-17T09:15:00Z',
+      user: 3,
+      device_type: 'camera',
+      port: 80,
+      location: 'Warehouse',
+      last_sync: '2024-01-19T10:00:00Z'
+    }
+  ];
+}
   // FIXED: Extract token from data.data.access
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {

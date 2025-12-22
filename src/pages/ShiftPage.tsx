@@ -1,0 +1,749 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Shift, 
+  CreateShiftRequest,
+  UpdateShiftRequest,
+  apiService,
+  User 
+} from '../lib/api';
+
+const ShiftPage = () => {
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [targetUserId, setTargetUserId] = useState<string>('');
+  const [showAddShift, setShowAddShift] = useState(false);
+  const [showEditShift, setShowEditShift] = useState<Shift | null>(null);
+  const [newShift, setNewShift] = useState<CreateShiftRequest>({
+    name: '',
+    start_time: '09:00:00',
+    end_time: '18:00:00',
+    user: undefined
+  });
+  const [editShift, setEditShift] = useState<UpdateShiftRequest>({
+    name: '',
+    start_time: '',
+    end_time: '',
+    user: undefined
+  });
+
+  // Smenalarni yuklash
+  useEffect(() => {
+    loadCurrentUserAndShifts();
+  }, []);
+
+  const loadCurrentUserAndShifts = async (userId?: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Joriy foydalanuvchini olish
+      const user = await apiService.getCurrentUser();
+      setCurrentUser(user);
+      
+      // Agar userId berilgan bo'lsa, o'sha userId bilan, aks holda undefined
+      const shiftsData = await apiService.getShifts(userId);
+      setShifts(shiftsData);
+    } catch (err: any) {
+      console.error('Smenalarni yuklashda xatolik:', err);
+      
+      // API xatosini aniqroq ko'rsatish
+      if (err.status === 400 && err.data?.user_id) {
+        setError(`Xatolik: ${err.data.user_id}`);
+      } else {
+        setError(err.message || 'Smenalarni yuklashda xatolik');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadUserShifts = async () => {
+    if (!targetUserId.trim()) {
+      setError('Iltimos, foydalanuvchi ID-sini kiriting');
+      return;
+    }
+    
+    const userId = parseInt(targetUserId);
+    if (isNaN(userId)) {
+      setError('Noto\'g\'ri foydalanuvchi ID-si');
+      return;
+    }
+    
+    await loadCurrentUserAndShifts(userId);
+  };
+
+  const handleAddShift = async () => {
+    if (!newShift.name || !newShift.start_time || !newShift.end_time) {
+      setError('Iltimos, barcha majburiy maydonlarni to\'ldiring');
+      return;
+    }
+    
+    // Vaqt formatini tekshirish va to'ldirish
+    const formattedData: CreateShiftRequest = {
+      name: newShift.name,
+      start_time: formatTimeForServer(newShift.start_time),
+      end_time: formatTimeForServer(newShift.end_time),
+    };
+    
+    // Agar foydalanuvchi superadmin bo'lsa va user ID kiritgan bo'lsa
+    if (currentUser?.role === 'superadmin' && newShift.user) {
+      formattedData.user = newShift.user;
+    }
+    
+    console.log('📤 Smena yaratish ma\'lumotlari:', formattedData);
+    
+    try {
+      await apiService.createShift(formattedData);
+      
+      // Smenalarni qayta yuklash
+      await loadCurrentUserAndShifts();
+      setShowAddShift(false);
+      setNewShift({
+        name: '',
+        start_time: '09:00:00',
+        end_time: '18:00:00',
+        user: undefined
+      });
+    } catch (err: any) {
+      console.error('Smena qo\'shish xatosi:', err);
+      
+      // API xatosini aniqroq ko'rsatish
+      if (err.status === 400 && err.data?.user_id) {
+        setError(`Xatolik: ${err.data.user_id}`);
+      } else if (err.status === 400 && err.data?.detail) {
+        setError(`Xatolik: ${err.data.detail}`);
+      } else if (err.message) {
+        setError(`Xatolik: ${err.message}`);
+      } else {
+        setError('Smena qo\'shishda xatolik');
+      }
+    }
+  };
+
+  const handleEditShift = async () => {
+    if (!showEditShift) return;
+    
+    try {
+      const updateData: UpdateShiftRequest = {};
+      
+      // Faqat o'zgartirilgan maydonlarni yuborish
+      if (editShift.name && editShift.name !== showEditShift.name) {
+        updateData.name = editShift.name;
+      }
+      
+      if (editShift.start_time && formatTimeForServer(editShift.start_time) !== showEditShift.start_time) {
+        updateData.start_time = formatTimeForServer(editShift.start_time);
+      }
+      
+      if (editShift.end_time && formatTimeForServer(editShift.end_time) !== showEditShift.end_time) {
+        updateData.end_time = formatTimeForServer(editShift.end_time);
+      }
+      
+      // Agar foydalanuvchi superadmin bo'lsa
+      if (currentUser?.role === 'superadmin' && editShift.user !== undefined) {
+        updateData.user = editShift.user;
+      }
+      
+      // Agar hech narsa o'zgartirilmagan bo'lsa
+      if (Object.keys(updateData).length === 0) {
+        setShowEditShift(null);
+        return;
+      }
+      
+      console.log('✏️ Smenani yangilash ma\'lumotlari:', updateData);
+      
+      await apiService.updateShift(showEditShift.id, updateData);
+      
+      // Smenalarni qayta yuklash
+      await loadCurrentUserAndShifts();
+      setShowEditShift(null);
+      setEditShift({
+        name: '',
+        start_time: '',
+        end_time: '',
+        user: undefined
+      });
+    } catch (err: any) {
+      console.error('Smenani yangilash xatosi:', err);
+      
+      // API xatosini aniqroq ko'rsatish
+      if (err.status === 400 && err.data?.user_id) {
+        setError(`Xatolik: ${err.data.user_id}`);
+      } else if (err.status === 400 && err.data?.detail) {
+        setError(`Xatolik: ${err.data.detail}`);
+      } else if (err.message) {
+        setError(`Xatolik: ${err.message}`);
+      } else {
+        setError('Smenani yangilashda xatolik');
+      }
+    }
+  };
+
+  const handleDeleteShift = async (id: number) => {
+    if (!window.confirm('Haqiqatan ham ushbu smenani o\'chirmoqchimisiz?')) {
+      return;
+    }
+    
+    try {
+      await apiService.deleteShift(id);
+      // Smenalarni qayta yuklash
+      await loadCurrentUserAndShifts();
+    } catch (err: any) {
+      console.error('Smenani o\'chirish xatosi:', err);
+      
+      // API xatosini aniqroq ko'rsatish
+      if (err.status === 400 && err.data?.user_id) {
+        setError(`Xatolik: ${err.data.user_id}`);
+      } else if (err.message) {
+        setError(`Xatolik: ${err.message}`);
+      } else {
+        setError('Smenani o\'chirishda xatolik');
+      }
+    }
+  };
+
+  // Server uchun vaqt formatlash
+  const formatTimeForServer = (time: string): string => {
+    if (!time) return '00:00:00';
+    
+    // Agar ":" belgisi bo'lsa
+    if (time.includes(':')) {
+      const parts = time.split(':');
+      if (parts.length === 1) {
+        // Faqat soat: "09" -> "09:00:00"
+        return `${parts[0].padStart(2, '0')}:00:00`;
+      } else if (parts.length === 2) {
+        // Soat va minut: "09:00" -> "09:00:00"
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+      } else {
+        // To'liq format: "09:00:00"
+        return time;
+      }
+    } else {
+      // Raqam: "900" -> "09:00:00"
+      const paddedTime = time.padStart(4, '0');
+      return `${paddedTime.substring(0, 2)}:${paddedTime.substring(2, 4)}:00`;
+    }
+  };
+
+  // Input uchun vaqt formatlash
+  const formatTimeForInput = (timeString: string): string => {
+    if (!timeString) return '';
+    
+    // "14:28:20" -> "14:28"
+    if (timeString && timeString.length >= 5) {
+      return timeString.substring(0, 5);
+    }
+    return timeString;
+  };
+
+  // Smena davomiyligini hisoblash (XATOLIKNI OLDINI OLISH UCHUN)
+  const calculateDuration = (startTime: string, endTime: string): string => {
+    try {
+      const start = formatTimeForServer(startTime);
+      const end = formatTimeForServer(endTime);
+      
+      const startParts = start.split(':').map(Number);
+      const endParts = end.split(':').map(Number);
+      
+      if (startParts.length < 3 || endParts.length < 3) {
+        return 'Format xatosi';
+      }
+      
+      let startHours = startParts[0];
+      let startMinutes = startParts[1];
+      let endHours = endParts[0];
+      let endMinutes = endParts[1];
+      
+      // Agar tugash vaqti boshlanish vaqtidan kichik bo'lsa, keyingi kunga o'tkazamiz
+      if (endHours < startHours || (endHours === startHours && endMinutes < startMinutes)) {
+        endHours += 24;
+      }
+      
+      const totalMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      
+      return `${hours} soat ${minutes} daqiqa`;
+    } catch (error) {
+      console.error('Davomiylik hisoblashda xatolik:', error);
+      return 'Hisoblanmadi';
+    }
+  };
+
+  // Yangi smenaning davomiyligini hisoblash
+  const getNewShiftDuration = () => {
+    return calculateDuration(newShift.start_time, newShift.end_time);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Noma\'lum';
+    return new Date(dateString).toLocaleString('uz-UZ', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const openEditModal = (shift: Shift) => {
+    setShowEditShift(shift);
+    setEditShift({
+      name: shift.name,
+      start_time: formatTimeForInput(shift.start_time),
+      end_time: formatTimeForInput(shift.end_time),
+      user: shift.user
+    });
+  };
+
+  // Vaqt input o'zgartirganda
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = e.target.value;
+    setNewShift({
+      ...newShift,
+      start_time: time + ':00'
+    });
+  };
+
+  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = e.target.value;
+    setNewShift({
+      ...newShift,
+      end_time: time + ':00'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Smenalar yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Sarlavha */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Smena Boshqaruvi</h1>
+          <p className="text-gray-600 mt-2">
+            Ish smenalari va vaqt jadvallarini boshqarish
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          {/* Superadmin: Boshqa foydalanuvchi smenalarini yuklash */}
+          {currentUser?.role === 'superadmin' && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Foydalanuvchi ID-sini kiriting"
+                value={targetUserId}
+                onChange={(e) => setTargetUserId(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <button
+                onClick={handleLoadUserShifts}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap"
+              >
+                Foydalanuvchi Smenalarini Yuklash
+              </button>
+            </div>
+          )}
+          
+          <button
+            onClick={() => setShowAddShift(true)}
+            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+          >
+            + Yangi Smena Qo'shish
+          </button>
+        </div>
+      </div>
+
+      
+
+      {/* Xato xabari */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+          <button 
+            onClick={() => setError(null)}
+            className="mt-2 text-sm text-red-600 hover:text-red-800"
+          >
+            Yopish
+          </button>
+        </div>
+      )}
+
+      {/* Yangi smena qo'shish modali */}
+      {showAddShift && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Yangi Smena Qo'shish</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Smena Nomi *
+                  </label>
+                  <input
+                    type="text"
+                    value={newShift.name}
+                    onChange={(e) => setNewShift({...newShift, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Masalan: Kunduzgi smena"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Boshlanish Vaqti *
+                    </label>
+                    <input
+                      type="time"
+                      value={newShift.start_time.substring(0, 5)}
+                      onChange={handleStartTimeChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tanlangan: {newShift.start_time}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tugash Vaqti *
+                    </label>
+                    <input
+                      type="time"
+                      value={newShift.end_time.substring(0, 5)}
+                      onChange={handleEndTimeChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tanlangan: {newShift.end_time}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Superadmin uchun: Foydalanuvchiga biriktirish */}
+                {currentUser?.role === 'superadmin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Foydalanuvchi ID-siga biriktirish (ixtiyoriy)
+                    </label>
+                    <input
+                      type="number"
+                      value={newShift.user || ''}
+                      onChange={(e) => setNewShift({
+                        ...newShift, 
+                        user: e.target.value ? parseInt(e.target.value) : undefined
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="O'zingizning smenalaringiz uchun bo'sh qoldiring"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Agar bo'sh qoldirsangiz, smena o'zingizga biriktiriladi
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 p-3 rounded-md">
+                  <p className="text-sm text-blue-700">
+                    Smena davomiyligi: {getNewShiftDuration()}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Serverga yuboriladigan format: {formatTimeForServer(newShift.start_time)} - {formatTimeForServer(newShift.end_time)}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowAddShift(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Bekor Qilish
+                </button>
+                <button
+                  onClick={handleAddShift}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Qo'shish
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Smenani tahrirlash modali */}
+      {showEditShift && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Smenani Tahrirlash</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Smena Nomi
+                  </label>
+                  <input
+                    type="text"
+                    value={editShift.name || ''}
+                    onChange={(e) => setEditShift({...editShift, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Masalan: Kunduzgi smena"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Boshlanish Vaqti
+                    </label>
+                    <input
+                      type="time"
+                      value={editShift.start_time?.substring(0, 5) || ''}
+                      onChange={(e) => setEditShift({...editShift, start_time: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tugash Vaqti
+                    </label>
+                    <input
+                      type="time"
+                      value={editShift.end_time?.substring(0, 5) || ''}
+                      onChange={(e) => setEditShift({...editShift, end_time: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
+                {currentUser?.role === 'superadmin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Foydalanuvchi ID-si
+                    </label>
+                    <input
+                      type="number"
+                      value={editShift.user || ''}
+                      onChange={(e) => setEditShift({
+                        ...editShift, 
+                        user: e.target.value ? parseInt(e.target.value) : undefined
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Joriy foydalanuvchi ID: {showEditShift.user}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm text-gray-600">
+                    Joriy davomiylik: {calculateDuration(
+                      showEditShift.start_time,
+                      showEditShift.end_time
+                    )}
+                  </p>
+                  {editShift.start_time && editShift.end_time && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      Yangi davomiylik: {calculateDuration(
+                        editShift.start_time,
+                        editShift.end_time
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-6 flex justify-between">
+                <button
+                  onClick={() => handleDeleteShift(showEditShift.id)}
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                >
+                  O'chirish
+                </button>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowEditShift(null)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Bekor Qilish
+                  </button>
+                  <button
+                    onClick={handleEditShift}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    Saqlash
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Smenalar ro'yxati */}
+      {shifts.length === 0 ? (
+        <div className="text-center py-16 bg-white border border-gray-200 rounded-lg">
+          <div className="text-gray-400 mb-4 text-6xl">🕐</div>
+          <h3 className="text-xl font-medium text-gray-900 mb-2">Smenalar topilmadi</h3>
+          <p className="text-gray-600 max-w-md mx-auto mb-6">
+            {currentUser?.role === 'superadmin' && !targetUserId
+              ? 'Hisobingizga biriktirilgan smenalar yo\'q. Boshlash uchun yangi smena qo\'shing yoki boshqa foydalanuvchi smenalarini ko\'rish uchun foydalanuvchi ID-sini kiriting.'
+              : 'Bu foydalanuvchi uchun smenalar topilmadi.'}
+          </p>
+          <button
+            onClick={() => setShowAddShift(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            + Birinchi Smenani Qo'shish
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Smena Nomi
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vaqt Jadvali
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Davomiylik
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Foydalanuvchi
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Harakatlar
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {shifts.map((shift) => (
+                  <tr key={shift.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900">{shift.name}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        ID: {shift.id}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Boshlanish:</span>
+                          <span className="font-medium">{apiService.formatTime(shift.start_time)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Tugash:</span>
+                          <span className="font-medium">{apiService.formatTime(shift.end_time)}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                        {calculateDuration(shift.start_time, shift.end_time)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm">
+                        <span className="font-medium">ID:</span> {shift.user}
+                        {currentUser?.id === shift.user && (
+                          <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                            Siz
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openEditModal(shift)}
+                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                        >
+                          Tahrirlash
+                        </button>
+                        <button
+                          onClick={() => handleDeleteShift(shift.id)}
+                          className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+                        >
+                          O'chirish
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Jadval pastki qismi */}
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="text-sm text-gray-600">
+                {shifts.length} ta smena ko'rsatilmoqda
+                {currentUser?.role === 'superadmin' && targetUserId && (
+                  <span className="ml-2 font-medium">(Foydalanuvchi ID: {targetUserId})</span>
+                )}
+                {currentUser?.role === 'superadmin' && !targetUserId && (
+                  <span className="ml-2">(sizning smenalaringiz)</span>
+                )}
+                {currentUser?.role !== 'superadmin' && (
+                  <span className="ml-2">(sizning smenalaringiz)</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => loadCurrentUserAndShifts()}
+                  className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+                >
+                  <span>↻</span>
+                  Yangilash
+                </button>
+                {currentUser?.role === 'superadmin' && targetUserId && (
+                  <button
+                    onClick={() => {
+                      setTargetUserId('');
+                      loadCurrentUserAndShifts();
+                    }}
+                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                  >
+                    Mening Smenalarim
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+     
+    </div>
+  );
+};
+
+export default ShiftPage;

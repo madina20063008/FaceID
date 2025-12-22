@@ -8,6 +8,8 @@ import { LoginPage } from '../pages/LoginPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { EmployeesPage } from '../pages/EmployeesPage';
 import { ProfilePage } from '../pages/ProfilePage';
+import DevicesPage from '../pages/DevicesPage';
+import ShiftPage from '../pages/ShiftPage';
 
 export default function App() {
   return (
@@ -45,6 +47,26 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <ProfilePage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/devices"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <DevicesPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shifts"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ShiftPage />
                   </Layout>
                 </ProtectedRoute>
               }
