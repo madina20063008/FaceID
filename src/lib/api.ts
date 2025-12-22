@@ -59,7 +59,8 @@ export interface Employee {
 export interface DailyAttendance {
   date: string;
   employees: Array<{
-    employee_id: number; // ✅ Changed from 'id' to 'employee_id'
+    id?: number;
+    employee_id?: number; // ✅ Changed from 'id' to 'employee_id'
     employee_no: string;
     name: string;
     kirish: string | null;
@@ -236,16 +237,17 @@ async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHist
       error: error
     });
     
-    // Provide user-friendly error messages
-    if (error.message.includes('Noto\'g\'ri hodim ID si')) {
-      throw new Error('Noto\'g\'ri hodim ID si');
-    } else if (error.message.includes('Sana kiritilmagan')) {
-      throw new Error('Sana kiritilmagan');
-    } else if ((error as any).status === 404) {
-      throw new Error('Hodim yoki sana uchun tarix topilmadi');
-    } else if ((error as any).status === 400) {
-      throw new Error('Noto\'g\'ri sana yoki hodim ID si');
-    }
+    const err = error as any;
+
+if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
+  throw new Error('Noto\'g\'ri hodim ID si');
+} else if (err.message?.includes('Sana kiritilmagan')) {
+  throw new Error('Sana kiritilmagan');
+} else if (err.status === 404) {
+  throw new Error('Hodim yoki sana uchun tarix topilmadi');
+} else if (err.status === 400) {
+  throw new Error('Noto\'g\'ri sana yoki hodim ID si');
+}
     
     throw error;
   }
@@ -1029,32 +1031,32 @@ export const mockEmployees: Employee[] = [
 ];
 
 // Mock daily attendance (for fallback)
-export const mockDailyAttendance: DailyAttendance = {
-  date: formatDate(new Date()),
-  employees: [
-    {
-      id: 1,
-      employee_no: 'EMP001',
-      name: 'Alisher Karimov',
-      kirish: '09:00',
-      chiqish: '18:00',
-      late: '0:00',
-      face: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-    },
-    {
-      id: 2,
-      employee_no: 'EMP002',
-      name: 'Dilnoza Umarova',
-      kirish: null,
-      chiqish: null,
-      late: '0:00',
-      face: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    },
-  ],
-  stats: {
-    total: 10,
-    came: 1,
-    late: 0,
-    absent: 9,
-  },
-};
+// export const mockDailyAttendance: DailyAttendance = {
+//   date: formatDate(new Date()),
+//   employees: [
+//     {
+//       id: 1,
+//       employee_no: 'EMP001',
+//       name: 'Alisher Karimov',
+//       kirish: '09:00',
+//       chiqish: '18:00',
+//       late: '0:00',
+//       face: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+//     },
+//     {
+//       id: 2,
+//       employee_no: 'EMP002',
+//       name: 'Dilnoza Umarova',
+//       kirish: null,
+//       chiqish: null,
+//       late: '0:00',
+//       face: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+//     },
+//   ],
+//   stats: {
+//     total: 10,
+//     came: 1,
+//     late: 0,
+//     absent: 9,
+//   },
+// };
