@@ -239,8 +239,8 @@ const TelegramChannelPage = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Telegram kanallari yuklanmoqda...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Telegram kanallari yuklanmoqda...</p>
         </div>
       </div>
     );
@@ -251,8 +251,8 @@ const TelegramChannelPage = () => {
       {/* Sarlavha */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Telegram Kanallari</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Telegram Kanallari</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Xabarnomalar va yangiliklar uchun Telegram kanallarini boshqarish
           </p>
         </div>
@@ -266,11 +266,11 @@ const TelegramChannelPage = () => {
                 placeholder="Foydalanuvchi ID-sini kiriting"
                 value={targetUserId}
                 onChange={(e) => setTargetUserId(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <button
                 onClick={handleLoadUserChannels}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap"
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition whitespace-nowrap"
               >
                 Foydalanuvchi Kanallarini Yuklash
               </button>
@@ -279,24 +279,23 @@ const TelegramChannelPage = () => {
           
           <button
             onClick={() => setShowAddChannel(true)}
-            className="px-6 py-3 bg-black text-white rounded-l transition font-medium whitespace-nowrap"
+            className="px-6 py-3 bg-black dark:bg-blue-600 text-white rounded-lg hover:bg-blue-800 dark:hover:bg-blue-700 transition font-medium whitespace-nowrap"
           >
             + Yangi Kanal Qo'shish
           </button>
         </div>
       </div>
 
-
       {/* Xato xabari */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>{error}</span>
           </div>
           <button 
             onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 hover:text-red-800"
+            className="mt-2 text-sm text-red-600 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200"
           >
             Yopish
           </button>
@@ -305,49 +304,50 @@ const TelegramChannelPage = () => {
 
       {/* Yangi kanal qo'shish modali */}
       {showAddChannel && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Yangi Telegram Kanal Qo'shish</h2>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                Yangi Telegram Kanal Qo'shish
+              </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Kanal Nomi *
                   </label>
                   <input
                     type="text"
                     value={newChannel.name}
                     onChange={(e) => setNewChannel({...newChannel, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: Xodimlar kanali"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Chat ID yoki Username *
                   </label>
                   <input
                     type="text"
                     value={newChannel.chat_id}
                     onChange={(e) => setNewChannel({...newChannel, chat_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: @company_staff yoki -100123456789"
                   />
-                  
                 </div>
                 
                 {/* resolved_id maydoni (yashirin) */}
                 <div className="hidden">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Resolved ID (ishlatilmaydi)
                   </label>
                   <input
                     type="text"
                     value={newChannel.resolved_id}
                     onChange={(e) => setNewChannel({...newChannel, resolved_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     disabled
                   />
                 </div>
@@ -355,7 +355,7 @@ const TelegramChannelPage = () => {
                 {/* Superadmin uchun: Foydalanuvchiga biriktirish */}
                 {currentUser?.role === 'superadmin' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Foydalanuvchi ID-siga biriktirish (ixtiyoriy)
                     </label>
                     <input
@@ -365,28 +365,26 @@ const TelegramChannelPage = () => {
                         ...newChannel, 
                         user: e.target.value ? parseInt(e.target.value) : undefined
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       placeholder="O'zingizning kanallaringiz uchun bo'sh qoldiring"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Agar bo'sh qoldirsangiz, kanal o'zingizga biriktiriladi
                     </p>
                   </div>
                 )}
-                
-               
               </div>
               
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   onClick={() => setShowAddChannel(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                 >
                   Bekor Qilish
                 </button>
                 <button
                   onClick={handleAddChannel}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
                 >
                   Qo'shish
                 </button>
@@ -398,55 +396,46 @@ const TelegramChannelPage = () => {
 
       {/* Kanalni tahrirlash modali */}
       {showEditChannel && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Telegram Kanalini Tahrirlash</h2>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                Telegram Kanalini Tahrirlash
+              </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Kanal Nomi
                   </label>
                   <input
                     type="text"
                     value={editChannel.name || ''}
                     onChange={(e) => setEditChannel({...editChannel, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: Xodimlar kanali"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Chat ID yoki Username
                   </label>
                   <input
                     type="text"
                     value={editChannel.chat_id || ''}
                     onChange={(e) => setEditChannel({...editChannel, chat_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: @company_staff yoki -100123456789"
                   />
                 </div>
                 
-                {/* resolved_id maydoni (faqat ko'rsatish uchun) */}
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Resolved ID (avtomatik to'ldiriladi)
-                  </label>
-                  <p className="text-sm text-gray-600 font-mono">
-                    {showEditChannel.resolved_id || 'Mavjud emas'}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Bu maydonni qo'lda o'zgartirib bo'lmaydi
-                  </p>
-                </div>
+               
                 
                 {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
                 {currentUser?.role === 'superadmin' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Foydalanuvchi ID-si
                     </label>
                     <input
@@ -456,9 +445,9 @@ const TelegramChannelPage = () => {
                         ...editChannel, 
                         user: e.target.value ? parseInt(e.target.value) : undefined
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Joriy foydalanuvchi ID: {showEditChannel.user}
                     </p>
                   </div>
@@ -468,7 +457,7 @@ const TelegramChannelPage = () => {
               <div className="mt-6 flex justify-between">
                 <button
                   onClick={() => handleDeleteChannel(showEditChannel.id)}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                  className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition"
                 >
                   O'chirish
                 </button>
@@ -476,13 +465,13 @@ const TelegramChannelPage = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowEditChannel(null)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                   >
                     Bekor Qilish
                   </button>
                   <button
                     onClick={handleEditChannel}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
                   >
                     Saqlash
                   </button>
@@ -495,83 +484,72 @@ const TelegramChannelPage = () => {
 
       {/* Kanallar ro'yxati */}
       {channels.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-gray-200 rounded-lg">
-          <div className="text-gray-400 mb-4 text-6xl">📢</div>
-          <h3 className="text-xl font-medium text-gray-900 mb-2">Telegram kanallari topilmadi</h3>
-          <p className="text-gray-600 max-w-md mx-auto mb-6">
+        <div className="text-center py-16 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="text-gray-400 dark:text-gray-500 mb-4 text-6xl">📢</div>
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+            Telegram kanallari topilmadi
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
             {currentUser?.role === 'superadmin' && !targetUserId
               ? 'Hisobingizga biriktirilgan Telegram kanallari yo\'q. Boshlash uchun yangi kanal qo\'shing yoki boshqa foydalanuvchi kanallarini ko\'rish uchun foydalanuvchi ID-sini kiriting.'
               : 'Bu foydalanuvchi uchun Telegram kanallari topilmadi.'}
           </p>
           <button
             onClick={() => setShowAddChannel(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="px-6 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             + Birinchi Kanal Qo'shish
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Kanal Nomi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Chat ID / Username
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Resolved ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Foydalanuvchi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Harakatlar
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {channels.map((channel) => (
-                  <tr key={channel.id} className="hover:bg-gray-50">
+                  <tr key={channel.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{channel.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="font-medium text-gray-900 dark:text-white">{channel.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         ID: {channel.id}
                       </div>
                       {channel.created_at && (
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           Yaratilgan: {formatDate(channel.created_at)}
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-mono text-sm text-gray-900">
+                      <div className="font-mono text-sm text-gray-900 dark:text-white">
                         {formatChatId(channel.chat_id)}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         {channel.chat_id.startsWith('@') ? 'Username' : 'Chat ID'}
                       </div>
                     </td>
+                   
                     <td className="px-6 py-4">
-                      <div className="text-sm">
-                        {channel.resolved_id ? (
-                          <span className="font-mono text-gray-600">{channel.resolved_id}</span>
-                        ) : (
-                          <span className="text-gray-400 italic">Mavjud emas</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Avtomatik to'ldiriladi
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
+                      <div className="text-sm text-gray-900 dark:text-white">
                         <span className="font-medium">ID:</span> {channel.user}
                         {currentUser?.id === channel.user && (
-                          <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                          <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded">
                             Siz
                           </span>
                         )}
@@ -581,11 +559,11 @@ const TelegramChannelPage = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => openEditModal(channel)}
-                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                          className="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition"
                         >
                           Tahrirlash
                         </button>
-                       
+                        
                       </div>
                     </td>
                   </tr>
@@ -593,11 +571,10 @@ const TelegramChannelPage = () => {
               </tbody>
             </table>
           </div>
-         
+          
+          
         </div>
       )}
-
-    
     </div>
   );
 };

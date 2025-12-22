@@ -320,8 +320,8 @@ const ShiftPage = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Smenalar yuklanmoqda...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Smenalar yuklanmoqda...</p>
         </div>
       </div>
     );
@@ -332,8 +332,8 @@ const ShiftPage = () => {
       {/* Sarlavha */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Smena Boshqaruvi</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Smena Boshqaruvi</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             Ish smenalari va vaqt jadvallarini boshqarish
           </p>
         </div>
@@ -347,11 +347,11 @@ const ShiftPage = () => {
                 placeholder="Foydalanuvchi ID-sini kiriting"
                 value={targetUserId}
                 onChange={(e) => setTargetUserId(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               />
               <button
                 onClick={handleLoadUserShifts}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap"
+                className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition whitespace-nowrap"
               >
                 Foydalanuvchi Smenalarini Yuklash
               </button>
@@ -360,25 +360,23 @@ const ShiftPage = () => {
           
           <button
             onClick={() => setShowAddShift(true)}
-            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+            className="px-6 py-3 bg-black dark:bg-blue-600 text-white rounded-lg hover:bg-blue-800 dark:hover:bg-blue-700 transition font-medium whitespace-nowrap"
           >
             + Yangi Smena Qo'shish
           </button>
         </div>
       </div>
 
-      
-
       {/* Xato xabari */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>{error}</span>
           </div>
           <button 
             onClick={() => setError(null)}
-            className="mt-2 text-sm text-red-600 hover:text-red-800"
+            className="mt-2 text-sm text-red-600 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200"
           >
             Yopish
           </button>
@@ -387,52 +385,54 @@ const ShiftPage = () => {
 
       {/* Yangi smena qo'shish modali */}
       {showAddShift && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Yangi Smena Qo'shish</h2>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                Yangi Smena Qo'shish
+              </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Smena Nomi *
                   </label>
                   <input
                     type="text"
                     value={newShift.name}
                     onChange={(e) => setNewShift({...newShift, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: Kunduzgi smena"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Boshlanish Vaqti *
                     </label>
                     <input
                       type="time"
                       value={newShift.start_time.substring(0, 5)}
                       onChange={handleStartTimeChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Tanlangan: {newShift.start_time}
                     </p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Tugash Vaqti *
                     </label>
                     <input
                       type="time"
                       value={newShift.end_time.substring(0, 5)}
                       onChange={handleEndTimeChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Tanlangan: {newShift.end_time}
                     </p>
                   </div>
@@ -441,7 +441,7 @@ const ShiftPage = () => {
                 {/* Superadmin uchun: Foydalanuvchiga biriktirish */}
                 {currentUser?.role === 'superadmin' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Foydalanuvchi ID-siga biriktirish (ixtiyoriy)
                     </label>
                     <input
@@ -451,20 +451,20 @@ const ShiftPage = () => {
                         ...newShift, 
                         user: e.target.value ? parseInt(e.target.value) : undefined
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       placeholder="O'zingizning smenalaringiz uchun bo'sh qoldiring"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Agar bo'sh qoldirsangiz, smena o'zingizga biriktiriladi
                     </p>
                   </div>
                 )}
                 
-                <div className="bg-blue-50 p-3 rounded-md">
-                  <p className="text-sm text-blue-700">
+                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-md">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
                     Smena davomiyligi: {getNewShiftDuration()}
                   </p>
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                     Serverga yuboriladigan format: {formatTimeForServer(newShift.start_time)} - {formatTimeForServer(newShift.end_time)}
                   </p>
                 </div>
@@ -473,13 +473,13 @@ const ShiftPage = () => {
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   onClick={() => setShowAddShift(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                 >
                   Bekor Qilish
                 </button>
                 <button
                   onClick={handleAddShift}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
                 >
                   Qo'shish
                 </button>
@@ -491,47 +491,49 @@ const ShiftPage = () => {
 
       {/* Smenani tahrirlash modali */}
       {showEditShift && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Smenani Tahrirlash</h2>
+              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                Smenani Tahrirlash
+              </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Smena Nomi
                   </label>
                   <input
                     type="text"
                     value={editShift.name || ''}
                     onChange={(e) => setEditShift({...editShift, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: Kunduzgi smena"
                   />
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Boshlanish Vaqti
                     </label>
                     <input
                       type="time"
                       value={editShift.start_time?.substring(0, 5) || ''}
                       onChange={(e) => setEditShift({...editShift, start_time: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Tugash Vaqti
                     </label>
                     <input
                       type="time"
                       value={editShift.end_time?.substring(0, 5) || ''}
                       onChange={(e) => setEditShift({...editShift, end_time: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
                   </div>
                 </div>
@@ -539,7 +541,7 @@ const ShiftPage = () => {
                 {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
                 {currentUser?.role === 'superadmin' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Foydalanuvchi ID-si
                     </label>
                     <input
@@ -549,23 +551,23 @@ const ShiftPage = () => {
                         ...editShift, 
                         user: e.target.value ? parseInt(e.target.value) : undefined
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Joriy foydalanuvchi ID: {showEditShift.user}
                     </p>
                   </div>
                 )}
                 
-                <div className="bg-gray-50 p-3 rounded-md">
-                  <p className="text-sm text-gray-600">
+                <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Joriy davomiylik: {calculateDuration(
                       showEditShift.start_time,
                       showEditShift.end_time
                     )}
                   </p>
                   {editShift.start_time && editShift.end_time && (
-                    <p className="text-sm text-blue-600 mt-1">
+                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
                       Yangi davomiylik: {calculateDuration(
                         editShift.start_time,
                         editShift.end_time
@@ -578,7 +580,7 @@ const ShiftPage = () => {
               <div className="mt-6 flex justify-between">
                 <button
                   onClick={() => handleDeleteShift(showEditShift.id)}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                  className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition"
                 >
                   O'chirish
                 </button>
@@ -586,13 +588,13 @@ const ShiftPage = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowEditShift(null)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                   >
                     Bekor Qilish
                   </button>
                   <button
                     onClick={handleEditShift}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
                   >
                     Saqlash
                   </button>
@@ -605,75 +607,81 @@ const ShiftPage = () => {
 
       {/* Smenalar ro'yxati */}
       {shifts.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-gray-200 rounded-lg">
-          <div className="text-gray-400 mb-4 text-6xl">🕐</div>
-          <h3 className="text-xl font-medium text-gray-900 mb-2">Smenalar topilmadi</h3>
-          <p className="text-gray-600 max-w-md mx-auto mb-6">
+        <div className="text-center py-16 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="text-gray-400 dark:text-gray-500 mb-4 text-6xl">🕐</div>
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
+            Smenalar topilmadi
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
             {currentUser?.role === 'superadmin' && !targetUserId
               ? 'Hisobingizga biriktirilgan smenalar yo\'q. Boshlash uchun yangi smena qo\'shing yoki boshqa foydalanuvchi smenalarini ko\'rish uchun foydalanuvchi ID-sini kiriting.'
               : 'Bu foydalanuvchi uchun smenalar topilmadi.'}
           </p>
           <button
             onClick={() => setShowAddShift(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="px-6 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
           >
             + Birinchi Smenani Qo'shish
           </button>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Smena Nomi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Vaqt Jadvali
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Davomiylik
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Foydalanuvchi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Harakatlar
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {shifts.map((shift) => (
-                  <tr key={shift.id} className="hover:bg-gray-50">
+                  <tr key={shift.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{shift.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="font-medium text-gray-900 dark:text-white">{shift.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         ID: {shift.id}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Boshlanish:</span>
-                          <span className="font-medium">{apiService.formatTime(shift.start_time)}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Boshlanish:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {apiService.formatTime(shift.start_time)}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Tugash:</span>
-                          <span className="font-medium">{apiService.formatTime(shift.end_time)}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Tugash:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {apiService.formatTime(shift.end_time)}
+                          </span>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                      <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm font-medium rounded-full">
                         {calculateDuration(shift.start_time, shift.end_time)}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">
+                      <div className="text-sm text-gray-900 dark:text-white">
                         <span className="font-medium">ID:</span> {shift.user}
                         {currentUser?.id === shift.user && (
-                          <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                          <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded">
                             Siz
                           </span>
                         )}
@@ -683,13 +691,13 @@ const ShiftPage = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => openEditModal(shift)}
-                          className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                          className="px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition"
                         >
                           Tahrirlash
                         </button>
                         <button
                           onClick={() => handleDeleteShift(shift.id)}
-                          className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+                          className="px-3 py-1 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition"
                         >
                           O'chirish
                         </button>
@@ -702,24 +710,26 @@ const ShiftPage = () => {
           </div>
           
           {/* Jadval pastki qismi */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+          <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
                 {shifts.length} ta smena ko'rsatilmoqda
                 {currentUser?.role === 'superadmin' && targetUserId && (
-                  <span className="ml-2 font-medium">(Foydalanuvchi ID: {targetUserId})</span>
+                  <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                    (Foydalanuvchi ID: {targetUserId})
+                  </span>
                 )}
                 {currentUser?.role === 'superadmin' && !targetUserId && (
-                  <span className="ml-2">(sizning smenalaringiz)</span>
+                  <span className="ml-2 dark:text-gray-300">(sizning smenalaringiz)</span>
                 )}
                 {currentUser?.role !== 'superadmin' && (
-                  <span className="ml-2">(sizning smenalaringiz)</span>
+                  <span className="ml-2 dark:text-gray-300">(sizning smenalaringiz)</span>
                 )}
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => loadCurrentUserAndShifts()}
-                  className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+                  className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2"
                 >
                   <span>↻</span>
                   Yangilash
@@ -730,7 +740,7 @@ const ShiftPage = () => {
                       setTargetUserId('');
                       loadCurrentUserAndShifts();
                     }}
-                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                    className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                   >
                     Mening Smenalarim
                   </button>
@@ -740,8 +750,6 @@ const ShiftPage = () => {
           </div>
         </div>
       )}
-
-     
     </div>
   );
 };
