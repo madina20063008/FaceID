@@ -11,6 +11,9 @@ import { ProfilePage } from '../pages/ProfilePage';
 import {DevicesPage} from '../pages/DevicesPage';
 import ShiftPage from '../pages/ShiftPage';
 import TelegramPage from '../pages/TelegramPage';
+import FilialPage from '../pages/FilialPage';
+import BreakTime from '../pages/BreakTime';
+import BreakTimeManager from '../pages/BreakTime';
 
 export default function App() {
   return (
@@ -78,6 +81,26 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <TelegramPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/filial"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <FilialPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/break"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <BreakTimeManager />
                   </Layout>
                 </ProtectedRoute>
               }

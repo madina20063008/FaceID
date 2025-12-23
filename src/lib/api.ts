@@ -144,30 +144,6 @@ export interface DeviceResponse {
   results: Device[];
 }
 
-// Smena (Shift) uchun interfeyslar
-export interface Shift {
-  id: number;
-  name: string;
-  start_time: string;
-  end_time: string;
-  user: number; // user ID who owns this shift
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CreateShiftRequest {
-  name: string;
-  start_time: string;
-  end_time: string;
-  user?: number; // Only for superadmin to assign to specific user
-}
-
-export interface UpdateShiftRequest {
-  name?: string;
-  start_time?: string;
-  end_time?: string;
-  user?: number;
-}
 
 // Telegram kanallari uchun interfeyslar
 export interface TelegramChannel {
@@ -191,6 +167,77 @@ export interface UpdateTelegramChannelRequest {
   name?: string;
   chat_id?: string;
   resolved_id?: string; // Optional, ishlatilmasin
+  user?: number;
+}
+
+// Add these Branch interfaces near your other interfaces
+export interface Branch {
+  id: number;
+  name: string;
+  created_at: string;
+  user: number; // user ID who owns this branch
+}
+
+export interface CreateBranchRequest {
+  name: string;
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateBranchRequest {
+  name?: string;
+  user?: number;
+}
+
+// Add these interfaces near other interfaces in api.ts
+export interface BreakTime {
+  id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+  user: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateBreakTimeRequest {
+  name: string;
+  start_time: string;
+  end_time: string;
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateBreakTimeRequest {
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+  user?: number;
+}
+
+// Update the Shift interface to include break_time
+export interface Shift {
+  id: number;
+  name: string;
+  start_time: string;
+  end_time: string;
+  user: number; // user ID who owns this shift
+  break_time: number | null; // Add this field - can be null
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateShiftRequest {
+  name: string;
+  start_time: string;
+  end_time: string;
+  break_time?: number | null; // Add this optional field
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateShiftRequest {
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+  break_time?: number | null; // Add this optional field
   user?: number;
 }
 
@@ -330,8 +377,257 @@ if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
 // ApiService klassiga quyidagi metodlarni qo'shing
 
 // ApiService klassida quyidagi metodlarni yangilaymiz:
+// ApiService klassiga BreakTime metodlarini qo'shing
 
-// Barcha smenalarni olish
+// Replace the existing getBreakTimes method with this:
+
+// Barcha tanaffus vaqtlarini olish
+async getBreakTimes(userId?: number): Promise<BreakTime[]> {
+  console.log('⏱️ Tanaffus vaqtlarini olish...');
+  
+  try {
+    // HAR DOIM user_id bilan so'rov yuborish (endpoint sizda shunday ko'rsatilgan)
+    // Agar superadmin boshqa adminning tanaffus vaqtlarini ko'rish uchun user_id berilsa
+    const params = new URLSearchParams();
+    
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin ${userId} foydalanuvchisining tanaffus vaqtlarini olish`);
+    } else {
+      // Oddiy admin yoki o'z tanaffus vaqtlari uchun
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/break_time/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<BreakTime[]>(endpoint);
+    console.log(`✅ ${response.length} ta tanaffus vaqti yuklandi`);
+    
+    // Response formatini tekshirish va kerak bo'lsa formatlash
+    if (response && Array.isArray(response)) {
+      return response.map(item => ({
+        id: item.id || 0,
+        name: item.name || '',
+        start_time: item.start_time || '',
+        end_time: item.end_time || '',
+        user: item.user || this.USER_ID,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+    }
+    
+    return response || [];
+  } catch (error) {
+    console.error('❌ Tanaffus vaqtlarini yuklashda xatolik:', error);
+    
+    // Debug uchun API responseni ko'rish
+    if ((error as any).status === 400) {
+      console.log('⚠️ 400 xatosi: Noto\'g\'ri user_id yoki parametrlar');
+    } else if ((error as any).status === 401) {
+      console.log('⚠️ 401 xatosi: Kirish huquqi yo\'q');
+    } else if ((error as any).status === 403) {
+      console.log('⚠️ 403 xatosi: Ruxsat yo\'q');
+    } else if ((error as any).status === 404) {
+      console.log('⚠️ 404 xatosi: Endpoint topilmadi');
+    }
+    
+    // Demo/fallback uchun
+    console.log('🔄 Mock tanaffus vaqtlari ishlatilmoqda');
+    return this.getMockBreakTimes();
+  }
+}
+
+// Replace the existing createBreakTime method:
+
+// Yangi tanaffus vaqti yaratish
+async createBreakTime(data: CreateBreakTimeRequest): Promise<BreakTime> {
+  console.log('➕ Yangi tanaffus vaqti yaratish...');
+  
+  try {
+    // API ga yuboriladigan ma'lumotlar
+    const breakTimeData: any = {
+      name: data.name,
+      start_time: data.start_time,
+      end_time: data.end_time,
+    };
+    
+    // SUPERADMIN UCHUN: Agar boshqa foydalanuvchiga tanaffus vaqti yaratmoqchi bo'lsa
+    if (data.user && data.user !== this.USER_ID) {
+      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga tanaffus vaqti yaratmoqda`);
+      // user_id ni query parametr sifatida yuborish
+    }
+    
+    // user_id ni query parametr sifatida yuborish
+    const params = new URLSearchParams();
+    params.append('user_id', data.user?.toString() || this.USER_ID.toString());
+    
+    console.log('📦 Tanaffus vaqti ma\'lumotlari:', breakTimeData);
+    console.log('🔗 Query parametrlar:', params.toString());
+    
+    const endpoint = `/day/break_time/?${params.toString()}`;
+    const response = await this.request<BreakTime>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(breakTimeData),
+    });
+    
+    console.log('✅ Tanaffus vaqti muvaffaqiyatli yaratildi:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Tanaffus vaqti yaratishda xatolik:', error);
+    
+    // Xatolik tafsilotlarini chiqarish
+    if ((error as any).status === 400) {
+      const errorData = (error as any).data;
+      console.error('❌ Validation errors:', errorData);
+      
+      if (errorData) {
+        let errorMsg = 'Validation error: ';
+        Object.keys(errorData).forEach(key => {
+          errorMsg += `${key}: ${errorData[key]}; `;
+        });
+        throw new Error(errorMsg);
+      }
+    }
+    
+    throw error;
+  }
+}
+
+// Tanaffus vaqtini yangilash
+async updateBreakTime(id: number, data: UpdateBreakTimeRequest): Promise<BreakTime> {
+  console.log(`✏️ ${id} ID-li tanaffus vaqtini yangilash...`);
+  
+  try {
+    // Yangilash uchun tayyor ma'lumot
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.start_time !== undefined) updateData.start_time = data.start_time;
+    if (data.end_time !== undefined) updateData.end_time = data.end_time;
+    
+    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
+    if (data.user !== undefined) {
+      updateData.user_id = data.user;
+    } else {
+      // Agar foydalanuvchi o'zgartirilmasa, joriy user_id ni yuborish
+      updateData.user_id = this.USER_ID;
+    }
+    
+    console.log('📦 Yangilash ma\'lumotlari:', updateData);
+    
+    // user_id parametrini URL ga qo'shish
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/day/break_time/${id}/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<BreakTime>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ Tanaffus vaqti muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li tanaffus vaqtini yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Tanaffus vaqtini o'chirish
+async deleteBreakTime(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li tanaffus vaqtini o'chirish...`);
+  
+  try {
+    // user_id parametrini URL ga qo'shish
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/day/break_time/${id}/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Tanaffus vaqti muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li tanaffus vaqtini o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Mock tanaffus vaqtlari ma'lumotlari (fallback uchun)
+private getMockBreakTimes(): BreakTime[] {
+  return [
+    {
+      id: 1,
+      name: 'Tushlik tanaffusi',
+      start_time: '13:00:00',
+      end_time: '14:00:00',
+      user: 2,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: 2,
+      name: 'Choy tanaffusi',
+      start_time: '11:00:00',
+      end_time: '11:15:00',
+      user: 2,
+      created_at: '2024-01-16T11:20:00Z',
+      updated_at: '2024-01-16T11:20:00Z'
+    },
+    {
+      id: 3,
+      name: 'Shaxsiy tanaffus',
+      start_time: '15:30:00',
+      end_time: '15:45:00',
+      user: 3,
+      created_at: '2024-01-17T09:15:00Z',
+      updated_at: '2024-01-17T09:15:00Z'
+    }
+  ];
+}
+
+// Vaqtni formatlash uchun yordamchi metod
+formatBreakTime(timeString: string): string {
+  try {
+    // "14:28:20" formatidan "14:28" formatiga o'tkazish
+    const timeParts = timeString.split(':');
+    if (timeParts.length >= 2) {
+      return `${timeParts[0]}:${timeParts[1]}`;
+    }
+    return timeString;
+  } catch (error) {
+    console.error('Tanaffus vaqtini formatlashda xatolik:', error);
+    return timeString;
+  }
+}
+
+// Tanaffus davomiyligini hisoblash
+calculateBreakDuration(startTime: string, endTime: string): string {
+  try {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    
+    const durationMs = end.getTime() - start.getTime();
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+      return `${hours} soat ${minutes} daqiqa`;
+    } else {
+      return `${minutes} daqiqa`;
+    }
+  } catch (error) {
+    console.error('Tanaffus davomiyligini hisoblashda xatolik:', error);
+    return 'Hisoblanmadi';
+  }
+}
+// Update the getShifts method - FIXED URL
 async getShifts(userId?: number): Promise<Shift[]> {
   console.log('🔄 Smenalarni olish...');
   
@@ -348,14 +644,41 @@ async getShifts(userId?: number): Promise<Shift[]> {
       params.append('user_id', this.USER_ID.toString());
     }
     
-    const endpoint = `/day/shift/${params.toString() ? '?' + params.toString() : ''}`;
+    // FIX: Use the correct endpoint with user_id parameter
+    const endpoint = `/day/shift/?${params.toString()}`;
     console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<Shift[]>(endpoint);
     console.log(`✅ ${response.length} ta smena yuklandi`);
-    return response;
+    
+    // Format the response to include break_time field
+    if (response && Array.isArray(response)) {
+      return response.map(shift => ({
+        id: shift.id || 0,
+        name: shift.name || '',
+        start_time: shift.start_time || '',
+        end_time: shift.end_time || '',
+        user: shift.user || this.USER_ID,
+        break_time: shift.break_time || null,
+        created_at: shift.created_at,
+        updated_at: shift.updated_at
+      }));
+    }
+    
+    return response || [];
   } catch (error) {
     console.error('❌ Smenalarni yuklashda xatolik:', error);
+    
+    // Debug uchun API responseni ko'rish
+    if ((error as any).status === 400) {
+      console.log('⚠️ 400 xatosi: Noto\'g\'ri user_id yoki parametrlar');
+    } else if ((error as any).status === 401) {
+      console.log('⚠️ 401 xatosi: Kirish huquqi yo\'q');
+    } else if ((error as any).status === 403) {
+      console.log('⚠️ 403 xatosi: Ruxsat yo\'q');
+    } else if ((error as any).status === 404) {
+      console.log('⚠️ 404 xatosi: Endpoint topilmadi');
+    }
     
     // Demo/fallback uchun
     console.log('🔄 Mock smena ma\'lumotlari ishlatilmoqda');
@@ -363,41 +686,68 @@ async getShifts(userId?: number): Promise<Shift[]> {
   }
 }
 
-// Yangi smena yaratish
+// Update createShift method to include user_id in URL
 async createShift(data: CreateShiftRequest): Promise<Shift> {
   console.log('➕ Yangi smena yaratish...');
   
   try {
+    // API ga yuboriladigan ma'lumotlar
     const shiftData: any = {
       name: data.name,
       start_time: data.start_time,
       end_time: data.end_time,
-      user_id: this.USER_ID, // HAR DOIM user_id yuborish kerak
     };
+    
+    // Add break_time if provided
+    if (data.break_time !== undefined) {
+      shiftData.break_time = data.break_time;
+    }
+    
+    // user_id ni query parametr sifatida yuborish
+    const params = new URLSearchParams();
     
     // Agar superadmin boshqa foydalanuvchiga smena biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
-      shiftData.user_id = data.user;
+      params.append('user_id', data.user.toString());
       console.log(`👑 Superadmin ${data.user} foydalanuvchisiga smena biriktirilmoqda`);
+    } else {
+      // Oddiy admin yoki o'z smenalari uchun
+      params.append('user_id', this.USER_ID.toString());
     }
     
     console.log('📦 Smena ma\'lumotlari:', shiftData);
+    console.log('🔗 Query parametrlar:', params.toString());
     
-    const endpoint = `/day/shift/`;
+    const endpoint = `/day/shift/?${params.toString()}`;
     const response = await this.request<Shift>(endpoint, {
       method: 'POST',
       body: JSON.stringify(shiftData),
     });
     
-    console.log('✅ Smena muvaffaqiyatli yaratildi');
+    console.log('✅ Smena muvaffaqiyatli yaratildi:', response);
     return response;
   } catch (error) {
     console.error('❌ Smena yaratishda xatolik:', error);
+    
+    // Xatolik tafsilotlarini chiqarish
+    if ((error as any).status === 400) {
+      const errorData = (error as any).data;
+      console.error('❌ Validation errors:', errorData);
+      
+      if (errorData) {
+        let errorMsg = 'Validation error: ';
+        Object.keys(errorData).forEach(key => {
+          errorMsg += `${key}: ${errorData[key]}; `;
+        });
+        throw new Error(errorMsg);
+      }
+    }
+    
     throw error;
   }
 }
 
-// Smenani yangilash
+// Update updateShift method to include user_id in URL
 async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
   console.log(`✏️ ${id} ID-li smenani yangilash...`);
   
@@ -408,15 +758,24 @@ async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.start_time !== undefined) updateData.start_time = data.start_time;
     if (data.end_time !== undefined) updateData.end_time = data.end_time;
-    
-    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
-    if (data.user !== undefined) {
-      updateData.user_id = data.user;
-    }
+    if (data.break_time !== undefined) updateData.break_time = data.break_time;
     
     console.log('📦 Yangilash ma\'lumotlari:', updateData);
     
-    const endpoint = `/day/shift/${id}/`;
+    // user_id ni query parametr sifatida yuborish
+    const params = new URLSearchParams();
+    
+    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
+    if (data.user !== undefined) {
+      params.append('user_id', data.user.toString());
+    } else {
+      // Agar foydalanuvchi o'zgartirilmasa, joriy user_id ni yuborish
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/shift/${id}/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
     const response = await this.request<Shift>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
@@ -429,6 +788,7 @@ async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
     throw error;
   }
 }
+
 
 // Smenani o'chirish
 async deleteShift(id: number): Promise<void> {
@@ -482,7 +842,158 @@ async getTelegramChannels(userId?: number): Promise<TelegramChannel[]> {
     return this.getMockTelegramChannels();
   }
 }
+// In the ApiService class, add these Branch methods:
 
+// Barcha filiallarni olish
+async getBranches(userId?: number): Promise<Branch[]> {
+  console.log('🏢 Filiallarni olish...');
+  
+  try {
+    const params = new URLSearchParams();
+    
+    // SUPERADMIN UCHUN: Agar boshqa adminning filiallarini ko'rish uchun user_id berilsa
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin ${userId} foydalanuvchisining filiallarini olish`);
+    } else {
+      // Oddiy admin yoki o'z filiallari uchun
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/utils/branch/${params.toString() ? '?' + params.toString() : ''}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<Branch[]>(endpoint);
+    console.log(`✅ ${response.length} ta filial yuklandi`);
+    return response;
+  } catch (error) {
+    console.error('❌ Filiallarni yuklashda xatolik:', error);
+    
+    // Demo/fallback uchun
+    console.log('🔄 Mock filial ma\'lumotlari ishlatilmoqda');
+    return this.getMockBranches();
+  }
+}
+
+// Yangi filial yaratish
+async createBranch(data: CreateBranchRequest): Promise<Branch> {
+  console.log('➕ Yangi filial yaratish...');
+  
+  try {
+    const branchData: any = {
+      name: data.name,
+    };
+    
+    // Agar superadmin boshqa foydalanuvchiga filial biriktirmoqchi bo'lsa
+    if (data.user && data.user !== this.USER_ID) {
+      branchData.user_id = data.user;
+      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga filial biriktirilmoqda`);
+    } else {
+      // Oddiy admin uchun o'ziga biriktirish
+      branchData.user_id = this.USER_ID;
+    }
+    
+    console.log('📦 Filial ma\'lumotlari:', branchData);
+    
+    const endpoint = `/utils/branch/`;
+    const response = await this.request<Branch>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(branchData),
+    });
+    
+    console.log('✅ Filial muvaffaqiyatli yaratildi');
+    return response;
+  } catch (error) {
+    console.error('❌ Filial yaratishda xatolik:', error);
+    throw error;
+  }
+}
+
+async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
+  console.log(`✏️ ${id} ID-li filialni yangilash...`);
+  
+  try {
+    // Yangilash uchun tayyor ma'lumot
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    
+    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
+    if (data.user !== undefined) {
+      updateData.user_id = data.user;
+    } else {
+      // Agar foydalanuvchi o'zgartirilmasa, joriy user_id ni yuborish
+      updateData.user_id = this.USER_ID;
+    }
+    
+    console.log('📦 Yangilash ma\'lumotlari:', updateData);
+    
+    // FIX: Add user_id parameter to the URL
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/utils/branch/${id}/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<Branch>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ Filial muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li filialni yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Filialni o'chirish - FIXED: Add user_id parameter to URL
+async deleteBranch(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li filialni o'chirish...`);
+  
+  try {
+    // FIX: Add user_id parameter to the URL
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/utils/branch/${id}/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Filial muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li filialni o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Mock filial ma'lumotlari (fallback uchun)
+private getMockBranches(): Branch[] {
+  return [
+    {
+      id: 1,
+      name: 'Bosh filial',
+      created_at: '2024-01-15T10:30:00Z',
+      user: 2
+    },
+    {
+      id: 2,
+      name: 'Shahar markazi filiali',
+      created_at: '2024-01-16T11:20:00Z',
+      user: 2
+    },
+    {
+      id: 3,
+      name: 'Yangi shahar filiali',
+      created_at: '2024-01-17T09:15:00Z',
+      user: 3
+    }
+  ];
+}
 // Yangi Telegram kanali yaratish
 async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<TelegramChannel> {
   console.log('➕ Yangi Telegram kanali yaratish...');
@@ -609,38 +1120,7 @@ private getMockTelegramChannels(): TelegramChannel[] {
     }
   ];
 }
-// Mock smena ma'lumotlari (fallback uchun)
-private getMockShifts(): Shift[] {
-  return [
-    {
-      id: 1,
-      name: 'Kunduzgi smena',
-      start_time: '09:00:00',
-      end_time: '18:00:00',
-      user: 2,
-      created_at: '2024-01-15T10:30:00Z',
-      updated_at: '2024-01-15T10:30:00Z'
-    },
-    {
-      id: 2,
-      name: 'Kechki smena',
-      start_time: '18:00:00',
-      end_time: '02:00:00',
-      user: 2,
-      created_at: '2024-01-16T11:20:00Z',
-      updated_at: '2024-01-16T11:20:00Z'
-    },
-    {
-      id: 3,
-      name: 'Tungi smena',
-      start_time: '22:00:00',
-      end_time: '06:00:00',
-      user: 3,
-      created_at: '2024-01-17T09:15:00Z',
-      updated_at: '2024-01-17T09:15:00Z'
-    }
-  ];
-}
+
 
 // Vaqtni formatlash uchun yordamchi metod
 formatTime(timeString: string): string {
@@ -1653,34 +2133,3 @@ export const mockEmployees: Employee[] = [
     local_face: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
   },
 ];
-
-// Mock daily attendance (for fallback)
-// export const mockDailyAttendance: DailyAttendance = {
-//   date: formatDate(new Date()),
-//   employees: [
-//     {
-//       id: 1,
-//       employee_no: 'EMP001',
-//       name: 'Alisher Karimov',
-//       kirish: '09:00',
-//       chiqish: '18:00',
-//       late: '0:00',
-//       face: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-//     },
-//     {
-//       id: 2,
-//       employee_no: 'EMP002',
-//       name: 'Dilnoza Umarova',
-//       kirish: null,
-//       chiqish: null,
-//       late: '0:00',
-//       face: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-//     },
-//   ],
-//   stats: {
-//     total: 10,
-//     came: 1,
-//     late: 0,
-//     absent: 9,
-//   },
-// };

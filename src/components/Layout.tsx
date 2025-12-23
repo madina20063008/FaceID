@@ -25,6 +25,8 @@ import {
   ScanFace,
   Shuffle,
   MessageCircleMore,
+  Landmark,
+  Timer,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -43,6 +45,8 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Qurilmalar', href: '/devices', icon: ScanFace },
     { name: 'Smenalar', href: '/shifts', icon: Shuffle },
     { name: 'Telegram', href: '/telegram', icon: MessageCircleMore },
+    { name: 'Filial', href: '/filial', icon: Landmark },
+    { name: 'Tanaffus', href: '/break', icon: Timer },
     { name: 'Profil', href: '/profile', icon: User },
 
   ];
