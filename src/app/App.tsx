@@ -14,6 +14,7 @@ import TelegramPage from '../pages/TelegramPage';
 import FilialPage from '../pages/FilialPage';
 import BreakTime from '../pages/BreakTime';
 import BreakTimeManager from '../pages/BreakTime';
+import Workday from '../pages/Workday';
 
 export default function App() {
   return (
@@ -101,6 +102,16 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <BreakTimeManager />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workday"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Workday />
                   </Layout>
                 </ProtectedRoute>
               }

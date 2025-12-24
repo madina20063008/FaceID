@@ -241,6 +241,61 @@ export interface UpdateShiftRequest {
   user?: number;
 }
 
+ // WorkDay (Ish kunlari) interfaces
+export interface WorkDay {
+  id: number;
+  name: string;
+  days: string[]; // ['mon', 'tue', 'wed', etc.]
+  user: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateWorkDayRequest {
+  name: string;
+  days: string[];
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateWorkDayRequest {
+  name?: string;
+  days?: string[];
+  user?: number;
+}
+
+// DayOff (Dam olish kunlari) interfaces - same structure as WorkDay
+export interface DayOff {
+  id: number;
+  name: string;
+  days: string[]; // ['mon', 'tue', 'wed', etc.]
+  user: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateDayOffRequest {
+  name: string;
+  days: string[];
+  user?: number; // Only for superadmin to assign to specific user
+}
+
+export interface UpdateDayOffRequest {
+  name?: string;
+  days?: string[];
+  user?: number;
+}
+
+// Week days constants for display
+export const WEEK_DAYS = [
+  { value: 'mon', label: 'Dushanba' },
+  { value: 'tue', label: 'Seshanba' },
+  { value: 'wed', label: 'Chorshanba' },
+  { value: 'thu', label: 'Payshanba' },
+  { value: 'fri', label: 'Juma' },
+  { value: 'sat', label: 'Shanba' },
+  { value: 'sun', label: 'Yakshanba' },
+];
+
 // Helper function to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -374,20 +429,12 @@ if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
     throw error;
   }
 }
-// ApiService klassiga quyidagi metodlarni qo'shing
-
-// ApiService klassida quyidagi metodlarni yangilaymiz:
-// ApiService klassiga BreakTime metodlarini qo'shing
-
-// Replace the existing getBreakTimes method with this:
 
 // Barcha tanaffus vaqtlarini olish
 async getBreakTimes(userId?: number): Promise<BreakTime[]> {
   console.log('⏱️ Tanaffus vaqtlarini olish...');
   
   try {
-    // HAR DOIM user_id bilan so'rov yuborish (endpoint sizda shunday ko'rsatilgan)
-    // Agar superadmin boshqa adminning tanaffus vaqtlarini ko'rish uchun user_id berilsa
     const params = new URLSearchParams();
     
     if (userId && userId !== this.USER_ID) {
@@ -437,8 +484,6 @@ async getBreakTimes(userId?: number): Promise<BreakTime[]> {
     return this.getMockBreakTimes();
   }
 }
-
-// Replace the existing createBreakTime method:
 
 // Yangi tanaffus vaqti yaratish
 async createBreakTime(data: CreateBreakTimeRequest): Promise<BreakTime> {
@@ -626,6 +671,316 @@ calculateBreakDuration(startTime: string, endTime: string): string {
     console.error('Tanaffus davomiyligini hisoblashda xatolik:', error);
     return 'Hisoblanmadi';
   }
+}
+
+// WorkDay methods
+async getWorkDays(userId?: number): Promise<WorkDay[]> {
+  console.log('📅 WorkDay ro\'yxatini olish...');
+  
+  try {
+    const params = new URLSearchParams();
+    
+    // SUPERADMIN UCHUN: Agar boshqa adminning workdaylarini ko'rish uchun
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin ${userId} foydalanuvchisining workdaylarini olish`);
+    } else {
+      // Oddiy admin yoki o'z workdaylari uchun
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/work_day/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<WorkDay[]>(endpoint);
+    console.log(`✅ ${response.length} ta workday yuklandi`);
+    return response;
+  } catch (error) {
+    console.error('❌ WorkDay ro\'yxatini yuklashda xatolik:', error);
+    return this.getMockWorkDays();
+  }
+}
+
+async createWorkDay(data: CreateWorkDayRequest): Promise<WorkDay> {
+  console.log('➕ Yangi WorkDay yaratish...');
+  
+  try {
+    const workDayData: any = {
+      name: data.name,
+      days: data.days,
+    };
+    
+    // user_id parametrini URL ga qo'shish
+    const params = new URLSearchParams();
+    
+    // Agar superadmin boshqa foydalanuvchiga workday biriktirmoqchi bo'lsa
+    if (data.user && data.user !== this.USER_ID) {
+      params.append('user_id', data.user.toString());
+      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga workday biriktirilmoqda`);
+    } else {
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    console.log('📦 WorkDay ma\'lumotlari:', workDayData);
+    console.log('🔗 Query parametrlar:', params.toString());
+    
+    const endpoint = `/day/work_day/?${params.toString()}`;
+    const response = await this.request<WorkDay>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(workDayData),
+    });
+    
+    console.log('✅ WorkDay muvaffaqiyatli yaratildi');
+    return response;
+  } catch (error) {
+    console.error('❌ WorkDay yaratishda xatolik:', error);
+    throw error;
+  }
+}
+
+async updateWorkDay(id: number, data: UpdateWorkDayRequest): Promise<WorkDay> {
+  console.log(`✏️ ${id} ID-li WorkDay ni yangilash...`);
+  
+  try {
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.days !== undefined) updateData.days = data.days;
+    
+    // user_id parametrini URL ga qo'shish
+    const params = new URLSearchParams();
+    
+    if (data.user !== undefined) {
+      params.append('user_id', data.user.toString());
+    } else {
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/work_day/${id}/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<WorkDay>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ WorkDay muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li WorkDay ni yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+async deleteWorkDay(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li WorkDay ni o'chirish...`);
+  
+  try {
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/day/work_day/${id}/?${params.toString()}`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ WorkDay muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li WorkDay ni o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// DayOff methods (same structure, different endpoint)
+async getDayOffs(userId?: number): Promise<DayOff[]> {
+  console.log('🏖️ DayOff ro\'yxatini olish...');
+  
+  try {
+    const params = new URLSearchParams();
+    
+    if (userId && userId !== this.USER_ID) {
+      params.append('user_id', userId.toString());
+      console.log(`👑 Superadmin ${userId} foydalanuvchisining dayofflarini olish`);
+    } else {
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/day_off/?${params.toString()}`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<DayOff[]>(endpoint);
+    console.log(`✅ ${response.length} ta dayoff yuklandi`);
+    return response;
+  } catch (error) {
+    console.error('❌ DayOff ro\'yxatini yuklashda xatolik:', error);
+    return this.getMockDayOffs();
+  }
+}
+
+async createDayOff(data: CreateDayOffRequest): Promise<DayOff> {
+  console.log('➕ Yangi DayOff yaratish...');
+  
+  try {
+    const dayOffData: any = {
+      name: data.name,
+      days: data.days,
+    };
+    
+    const params = new URLSearchParams();
+    
+    if (data.user && data.user !== this.USER_ID) {
+      params.append('user_id', data.user.toString());
+      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga dayoff biriktirilmoqda`);
+    } else {
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    console.log('📦 DayOff ma\'lumotlari:', dayOffData);
+    
+    const endpoint = `/day/day_off/?${params.toString()}`;
+    const response = await this.request<DayOff>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(dayOffData),
+    });
+    
+    console.log('✅ DayOff muvaffaqiyatli yaratildi');
+    return response;
+  } catch (error) {
+    console.error('❌ DayOff yaratishda xatolik:', error);
+    throw error;
+  }
+}
+
+async updateDayOff(id: number, data: UpdateDayOffRequest): Promise<DayOff> {
+  console.log(`✏️ ${id} ID-li DayOff ni yangilash...`);
+  
+  try {
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.days !== undefined) updateData.days = data.days;
+    
+    const params = new URLSearchParams();
+    
+    if (data.user !== undefined) {
+      params.append('user_id', data.user.toString());
+    } else {
+      params.append('user_id', this.USER_ID.toString());
+    }
+    
+    const endpoint = `/day/day_off/${id}/?${params.toString()}`;
+    const response = await this.request<DayOff>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ DayOff muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li DayOff ni yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+async deleteDayOff(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li DayOff ni o'chirish...`);
+  
+  try {
+    const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/day/day_off/${id}/?${params.toString()}`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ DayOff muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li DayOff ni o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Mock data methods
+private getMockWorkDays(): WorkDay[] {
+  return [
+    {
+      id: 1,
+      name: 'Oddiy ish haftasi',
+      days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      user: 2,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: 2,
+      name: 'Yarim kunlik ish',
+      days: ['mon', 'wed', 'fri'],
+      user: 2,
+      created_at: '2024-01-16T11:20:00Z',
+      updated_at: '2024-01-16T11:20:00Z'
+    },
+    {
+      id: 3,
+      name: 'Dam olish kunlari',
+      days: ['sat', 'sun'],
+      user: 3,
+      created_at: '2024-01-17T09:15:00Z',
+      updated_at: '2024-01-17T09:15:00Z'
+    }
+  ];
+}
+
+private getMockDayOffs(): DayOff[] {
+  return [
+    {
+      id: 1,
+      name: 'Bayram kunlari',
+      days: ['fri', 'sat'],
+      user: 2,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-15T10:30:00Z'
+    },
+    {
+      id: 2,
+      name: 'Maxsus dam olish',
+      days: ['mon'],
+      user: 2,
+      created_at: '2024-01-16T11:20:00Z',
+      updated_at: '2024-01-16T11:20:00Z'
+    },
+    {
+      id: 3,
+      name: 'Korrektirovka',
+      days: ['tue', 'thu'],
+      user: 3,
+      created_at: '2024-01-17T09:15:00Z',
+      updated_at: '2024-01-17T09:15:00Z'
+    }
+  ];
+}
+
+// Helper function to format days for display
+formatWorkDays(days: string[]): string {
+  const dayMap: Record<string, string> = {
+    'mon': 'Dushanba',
+    'tue': 'Seshanba',
+    'wed': 'Chorshanba',
+    'thu': 'Payshanba',
+    'fri': 'Juma',
+    'sat': 'Shanba',
+    'sun': 'Yakshanba'
+  };
+  
+  if (!days || days.length === 0) return 'Kunlar tanlanmagan';
+  
+  const formattedDays = days.map(day => dayMap[day] || day);
+  
+  if (formattedDays.length <= 2) {
+    return formattedDays.join(', ');
+  }
+  
+  return `${formattedDays.length} kun (${formattedDays.slice(0, 2).join(', ')}...)`;
 }
 // Update the getShifts method - FIXED URL
 async getShifts(userId?: number): Promise<Shift[]> {

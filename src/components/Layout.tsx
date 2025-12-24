@@ -27,6 +27,7 @@ import {
   MessageCircleMore,
   Landmark,
   Timer,
+  CalendarDays,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -47,6 +48,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Telegram', href: '/telegram', icon: MessageCircleMore },
     { name: 'Filial', href: '/filial', icon: Landmark },
     { name: 'Tanaffus', href: '/break', icon: Timer },
+    { name: 'Ish kunlari', href: '/workday', icon: CalendarDays },
     { name: 'Profil', href: '/profile', icon: User },
 
   ];
