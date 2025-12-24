@@ -1,10 +1,16 @@
+
 import { useState, useEffect } from "react";
 import {
   apiService,
   Employee,
   CreateEmployeeRequest,
   mockEmployees,
+  Shift,
+  WorkDay,
+  DayOff,
 } from "../lib/api";
+// ... (other imports remain the same)
+
 import {
   Card,
   CardContent,
@@ -53,6 +59,7 @@ import {
   Trash2,
   RefreshCw,
   AlertCircle,
+  RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -67,6 +74,12 @@ export function EmployeesPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
   const [isViewLoading, setIsViewLoading] = useState(false);
+  
+  // NEW STATE: For selectors
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [workDays, setWorkDays] = useState<WorkDay[]>([]);
+  const [dayOffs, setDayOffs] = useState<DayOff[]>([]);
+  const [isLoadingSelectors, setIsLoadingSelectors] = useState(false);
 
   // Form data for create/edit
   const [formData, setFormData] = useState<CreateEmployeeRequest>({
@@ -90,6 +103,51 @@ export function EmployeesPage() {
     fine: 0,
     day_off: null,
   });
+
+  // Fetch all selectors (shifts, work_days, day_offs)
+  const fetchSelectors = async () => {
+    if (useMockData) return;
+    
+    try {
+      setIsLoadingSelectors(true);
+      console.log("🔄 Fetching selectors...");
+      
+      // Fetch shifts
+      try {
+        const shiftsData = await apiService.getShifts();
+        setShifts(shiftsData);
+        console.log(`✅ Loaded ${shiftsData.length} shifts`);
+      } catch (shiftError) {
+        console.error("Failed to fetch shifts:", shiftError);
+        setShifts([]);
+      }
+      
+      // Fetch work days
+      try {
+        const workDaysData = await apiService.getWorkDays();
+        setWorkDays(workDaysData);
+        console.log(`✅ Loaded ${workDaysData.length} work days`);
+      } catch (workDayError) {
+        console.error("Failed to fetch work days:", workDayError);
+        setWorkDays([]);
+      }
+      
+      // Fetch day offs
+      try {
+        const dayOffsData = await apiService.getDayOffs();
+        setDayOffs(dayOffsData);
+        console.log(`✅ Loaded ${dayOffsData.length} day offs`);
+      } catch (dayOffError) {
+        console.error("Failed to fetch day offs:", dayOffError);
+        setDayOffs([]);
+      }
+      
+    } catch (error) {
+      console.error("Error fetching selectors:", error);
+    } finally {
+      setIsLoadingSelectors(false);
+    }
+  };
 
   // Filter employees locally for search
   const filteredEmployees = Array.isArray(employees)
@@ -252,6 +310,9 @@ export function EmployeesPage() {
           description: formData.description,
           salary: formData.salary,
           device: formData.device_id,
+          shift: formData.shift,
+          work_day: formData.work_day,
+          day_off: formData.day_off,
         };
 
         setEmployees([...employees, newEmployee]);
@@ -268,15 +329,15 @@ export function EmployeesPage() {
           employment: formData.employment || "", // Ensure empty string, not undefined
           department: formData.department,
           position: formData.position || "", // Ensure empty string, not undefined
-          shift: formData.shift,
+          shift: formData.shift || null,
           description: formData.description || "", // Ensure empty string, not undefined
           phone_number: phoneNumber,
           salary: formData.salary || 0, // Ensure 0 if undefined
           break_time: formData.break_time,
-          work_day: formData.work_day,
+          work_day: formData.work_day || null,
           branch: formData.branch,
           fine: formData.fine || 0, // Ensure 0 if undefined
-          day_off: formData.day_off,
+          day_off: formData.day_off || null,
           // ❌ DO NOT include employee_no - API will generate it
         };
 
@@ -288,6 +349,8 @@ export function EmployeesPage() {
           description: employeeData.description,
           department: employeeData.department,
           shift: employeeData.shift,
+          work_day: employeeData.work_day,
+          day_off: employeeData.day_off,
           branch: employeeData.branch,
           fullData: employeeData,
         });
@@ -359,6 +422,9 @@ export function EmployeesPage() {
                   employee_no: formData.employee_no || emp.employee_no,
                   description: formData.description,
                   salary: formData.salary,
+                  shift: formData.shift,
+                  work_day: formData.work_day,
+                  day_off: formData.day_off,
                 }
               : emp
           )
@@ -376,15 +442,15 @@ export function EmployeesPage() {
           employment: formData.employment || "",
           department: formData.department,
           position: formData.position || "",
-          shift: formData.shift,
+          shift: formData.shift || null,
           description: formData.description || "",
           phone_number: phoneNumber,
           salary: formData.salary || 0,
           break_time: formData.break_time,
-          work_day: formData.work_day,
+          work_day: formData.work_day || null,
           branch: formData.branch,
           fine: formData.fine || 0,
-          day_off: formData.day_off,
+          day_off: formData.day_off || null,
           // ❌ DO NOT include employee_no in updates
         };
 
@@ -472,6 +538,8 @@ export function EmployeesPage() {
         description: employee.description,
         department: employee.department,
         shift: employee.shift,
+        work_day: employee.work_day,
+        day_off: employee.day_off,
         branch: employee.branch,
         id: employee.id,
         employee_no: employee.employee_no, // Still show in console but not in form
@@ -485,41 +553,41 @@ export function EmployeesPage() {
   };
 
   // Open view dialog
-const openView = async (employee: Employee) => {
-  try {
-    console.log("👁️ Opening view for employee ID:", employee.id);
-    
-    setIsViewLoading(true); // Set loading to true
-    setViewEmployee(employee);
-    
-    if (useMockData) {
-      // Use existing data for mock mode
-      console.log("📊 Using mock data for view");
-      setIsViewLoading(false);
-    } else {
-      // Fetch detailed employee data from API
-      console.log(`📡 Fetching detailed data for employee ${employee.id}`);
+  const openView = async (employee: Employee) => {
+    try {
+      console.log("👁️ Opening view for employee ID:", employee.id);
       
-      try {
-        const detailedEmployee = await apiService.getEmployeeById(
-          employee.id
-        );
-        console.log("✅ Detailed employee data loaded");
-        setViewEmployee(detailedEmployee);
-      } catch (error: any) {
-        console.error("❌ Failed to fetch employee details:", error);
-        // Keep current employee data
-        toast.warning("To'liq ma'lumotlar yuklanmadi");
-      } finally {
-        setIsViewLoading(false); // Set loading to false when done
+      setIsViewLoading(true); // Set loading to true
+      setViewEmployee(employee);
+      
+      if (useMockData) {
+        // Use existing data for mock mode
+        console.log("📊 Using mock data for view");
+        setIsViewLoading(false);
+      } else {
+        // Fetch detailed employee data from API
+        console.log(`📡 Fetching detailed data for employee ${employee.id}`);
+        
+        try {
+          const detailedEmployee = await apiService.getEmployeeById(
+            employee.id
+          );
+          console.log("✅ Detailed employee data loaded");
+          setViewEmployee(detailedEmployee);
+        } catch (error: any) {
+          console.error("❌ Failed to fetch employee details:", error);
+          // Keep current employee data
+          toast.warning("To'liq ma'lumotlar yuklanmadi");
+        } finally {
+          setIsViewLoading(false); // Set loading to false when done
+        }
       }
+    } catch (error) {
+      console.error("❌ Error in openView:", error);
+      setIsViewLoading(false);
+      toast.error("Hodim ma'lumotlarini ochishda xatolik");
     }
-  } catch (error) {
-    console.error("❌ Error in openView:", error);
-    setIsViewLoading(false);
-    toast.error("Hodim ma'lumotlarini ochishda xatolik");
-  }
-};
+  };
 
   const resetFormData = () => {
     setFormData({
@@ -576,10 +644,25 @@ const openView = async (employee: Employee) => {
     return amount.toLocaleString("uz-UZ") + " so'm";
   };
 
+  // Helper function to get selector display name
+  const getSelectorName = (id: number | null, list: any[]): string => {
+    if (!id) return "Tanlanmagan";
+    const item = list.find(item => item.id === id);
+    return item ? item.name : `ID: ${id}`;
+  };
+
   // Initialize
   useEffect(() => {
     fetchEmployees();
+    fetchSelectors();
   }, []);
+
+  // Fetch selectors when switching from mock to real mode
+  useEffect(() => {
+    if (!useMockData) {
+      fetchSelectors();
+    }
+  }, [useMockData]);
 
   return (
     <div className="space-y-6">
@@ -603,7 +686,7 @@ const openView = async (employee: Employee) => {
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
-            <RefreshCw
+            <RefreshCcw
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
             {isRefreshing ? "Sinxronizatsiya..." : "Sinxronizatsiyalash"}
@@ -829,6 +912,88 @@ const openView = async (employee: Employee) => {
                 min="0"
               />
             </div>
+            
+            {/* NEW: Shift selector */}
+            <div className="space-y-2">
+              <Label htmlFor="shift">Smena</Label>
+              <select
+                id="shift"
+                value={formData.shift || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    shift: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                disabled={isLoadingSelectors}
+              >
+                <option value="">Smena tanlanmagan</option>
+                {shifts.map((shift) => (
+                  <option key={shift.id} value={shift.id}>
+                    {shift.name} ({shift.start_time} - {shift.end_time})
+                  </option>
+                ))}
+                {isLoadingSelectors && !shifts.length && (
+                  <option disabled>Yuklanmoqda...</option>
+                )}
+              </select>
+            </div>
+            
+            {/* NEW: Work Day selector */}
+            <div className="space-y-2">
+              <Label htmlFor="work_day">Ish kunlari</Label>
+              <select
+                id="work_day"
+                value={formData.work_day || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    work_day: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                disabled={isLoadingSelectors}
+              >
+                <option value="">Ish kunlari tanlanmagan</option>
+                {workDays.map((workDay) => (
+                  <option key={workDay.id} value={workDay.id}>
+                    {workDay.name} ({workDay.days.length} kun)
+                  </option>
+                ))}
+                {isLoadingSelectors && !workDays.length && (
+                  <option disabled>Yuklanmoqda...</option>
+                )}
+              </select>
+            </div>
+            
+            {/* NEW: Day Off selector */}
+            <div className="space-y-2">
+              <Label htmlFor="day_off">Dam olish kunlari</Label>
+              <select
+                id="day_off"
+                value={formData.day_off || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    day_off: e.target.value ? parseInt(e.target.value) : null,
+                  })
+                }
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                disabled={isLoadingSelectors}
+              >
+                <option value="">Dam olish kunlari tanlanmagan</option>
+                {dayOffs.map((dayOff) => (
+                  <option key={dayOff.id} value={dayOff.id}>
+                    {dayOff.name} ({dayOff.days.length} kun)
+                  </option>
+                ))}
+                {isLoadingSelectors && !dayOffs.length && (
+                  <option disabled>Yuklanmoqda...</option>
+                )}
+              </select>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="description">Izoh</Label>
               <Input
@@ -865,103 +1030,138 @@ const openView = async (employee: Employee) => {
       </Dialog>
 
       {/* View Dialog */}
-<Dialog open={!!viewEmployee} onOpenChange={() => setViewEmployee(null)}>
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle>Hodim ma'lumotlari</DialogTitle>
-    </DialogHeader>
-    
-    {isViewLoading ? (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-        <p className="mt-2 text-gray-500">Hodim ma'lumotlari yuklanmoqda...</p>
-      </div>
-    ) : viewEmployee ? (
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-20 w-20">
-            <AvatarImage
-              src={viewEmployee.local_face}
-              alt={viewEmployee.name}
-            />
-            <AvatarFallback className="text-xl">
-              {viewEmployee.name
-                ? viewEmployee.name.charAt(0).toUpperCase()
-                : "H"}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="text-xl font-semibold">
-              {viewEmployee.name || "Noma'lum"}
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400">
-              {viewEmployee.position || "N/A"}
-            </p>
-            {viewEmployee.id && (
-              <p className="text-sm text-gray-500">
-                ID: {viewEmployee.id}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Hodim raqami
-            </p>
-            <p className="font-medium">
-              {viewEmployee.employee_no || "N/A"}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Telefon raqami
-            </p>
-            <p className="font-medium">
-              {viewEmployee.phone_number || "N/A"}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Lavozim
-            </p>
-            <p className="font-medium">
-              {viewEmployee.position || "N/A"}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Maosh
-            </p>
-            <p className="font-medium">
-              {formatCurrency(viewEmployee.salary)}
-            </p>
-          </div>
-          <div className="col-span-2">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Izoh
-            </p>
-            <p className="font-medium">
-              {viewEmployee.description || "N/A"}
-            </p>
-          </div>
-          {viewEmployee.created_at && (
-            <div className="col-span-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Yaratilgan sana
-              </p>
-              <p className="font-medium">
-                {new Date(viewEmployee.created_at).toLocaleDateString(
-                  "uz-UZ"
-                )}
-              </p>
+      <Dialog open={!!viewEmployee} onOpenChange={() => setViewEmployee(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hodim ma'lumotlari</DialogTitle>
+          </DialogHeader>
+          
+          {isViewLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-2 text-gray-500">Hodim ma'lumotlari yuklanmoqda...</p>
             </div>
-          )}
-        </div>
-      </div>
-    ) : null}
-  </DialogContent>
-</Dialog>
+          ) : viewEmployee ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage
+                    src={viewEmployee.local_face}
+                    alt={viewEmployee.name}
+                  />
+                  <AvatarFallback className="text-xl">
+                    {viewEmployee.name
+                      ? viewEmployee.name.charAt(0).toUpperCase()
+                      : "H"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-xl font-semibold">
+                    {viewEmployee.name || "Noma'lum"}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {viewEmployee.position || "N/A"}
+                  </p>
+                  {viewEmployee.id && (
+                    <p className="text-sm text-gray-500">
+                      ID: {viewEmployee.id}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Hodim raqami
+                  </p>
+                  <p className="font-medium">
+                    {viewEmployee.employee_no || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Telefon raqami
+                  </p>
+                  <p className="font-medium">
+                    {viewEmployee.phone_number || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Lavozim
+                  </p>
+                  <p className="font-medium">
+                    {viewEmployee.position || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Maosh
+                  </p>
+                  <p className="font-medium">
+                    {formatCurrency(viewEmployee.salary)}
+                  </p>
+                </div>
+                
+                {/* NEW: Show selector information */}
+                {viewEmployee.shift && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Smena
+                    </p>
+                    <p className="font-medium">
+                      {getSelectorName(viewEmployee.shift, shifts)}
+                    </p>
+                  </div>
+                )}
+                
+                {viewEmployee.work_day && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Ish kunlari
+                    </p>
+                    <p className="font-medium">
+                      {getSelectorName(viewEmployee.work_day, workDays)}
+                    </p>
+                  </div>
+                )}
+                
+                {viewEmployee.day_off && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Dam olish kunlari
+                    </p>
+                    <p className="font-medium">
+                      {getSelectorName(viewEmployee.day_off, dayOffs)}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Izoh
+                  </p>
+                  <p className="font-medium">
+                    {viewEmployee.description || "N/A"}
+                  </p>
+                </div>
+                {viewEmployee.created_at && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Yaratilgan sana
+                    </p>
+                    <p className="font-medium">
+                      {new Date(viewEmployee.created_at).toLocaleDateString(
+                        "uz-UZ"
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog
