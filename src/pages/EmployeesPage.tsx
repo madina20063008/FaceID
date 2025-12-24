@@ -668,7 +668,6 @@ const openView = async (employee: Employee) => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Hodim</TableHead>
-                    <TableHead>Raqami</TableHead>
                     <TableHead>Telefon</TableHead>
                     <TableHead>Lavozim</TableHead>
                     <TableHead>Maosh</TableHead>
@@ -703,7 +702,6 @@ const openView = async (employee: Employee) => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{employee.employee_no || "N/A"}</TableCell>
                       <TableCell>{employee.phone_number || "N/A"}</TableCell>
                       <TableCell>{employee.position || "N/A"}</TableCell>
                       <TableCell className="font-medium">
