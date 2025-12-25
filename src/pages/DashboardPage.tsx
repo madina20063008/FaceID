@@ -1069,69 +1069,12 @@ export function DashboardPage() {
                           </div>
                         )}
 
-                        {/* Debug info */}
-                        <details className="mt-6 border rounded-lg p-4">
-                          <summary className="cursor-pointer text-sm text-gray-500 mb-2 font-medium">
-                            Debug Ma'lumotlari
-                          </summary>
-                          <div className="space-y-2 text-sm">
-                            <div>
-                              <span className="font-medium">Hodim ID:</span>{" "}
-                              {selectedEmployeeId}
-                            </div>
-                            <div>
-                              <span className="font-medium">Sana:</span>{" "}
-                              {selectedDate}
-                            </div>
-                            // Update the debug info section:
-                            <div>
-                              <span className="font-medium">API Endpoint:</span>{" "}
-                              /person/employee-history/?date={selectedDate}
-                              &employee_id={selectedEmployeeId}&user_id=2
-                            </div>
-                            <div>
-                              <span className="font-medium">
-                                Jami Recordlar:
-                              </span>{" "}
-                              {employeeHistory.length}
-                            </div>
-                          </div>
-                        </details>
+                        
                       </div>
                     )}
                   </div>
 
-                  {/* Modal Footer */}
-                  <div className="border-t px-6 py-4 flex justify-between gap-2">
-                    <div className="text-sm text-gray-500">
-                      {employeeHistory.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          <span>
-                            {filteredHistory.length} ta tadbir ko'rsatilmoqda
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={closeHistoryModal}>
-                        Yopish
-                      </Button>
-                      {employeeHistory.length > 0 && (
-                        <Button
-                          onClick={() => {
-                            // Function to export history
-                            toast.info(
-                              "Export funksiyasi tez orada qo'shiladi"
-                            );
-                          }}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Yuklab olish
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                 
                 </div>
               </div>
             </motion.div>

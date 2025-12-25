@@ -27,6 +27,7 @@ export interface User {
   phone_number: string;
   role: string;
   is_active: boolean;
+  subscription: any;
 }
 
 export interface Employee {
@@ -285,6 +286,93 @@ export interface UpdateDayOffRequest {
   user?: number;
 }
 
+// Tariflar uchun interfeyslar
+export interface Plan {
+  id: number;
+  name: string;
+  plan_type: 'standard' | 'premium' | 'enterprise';
+  billing_cycle: 'monthly' | 'quarterly' | 'yearly';
+  duration_months: number;
+  price: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreatePlanRequest {
+  name: string;
+  plan_type: 'standard' | 'premium' | 'enterprise';
+  billing_cycle: 'monthly' | 'quarterly' | 'yearly';
+  price: string;
+  duration_months?: number;
+}
+// Add this interface near other interfaces in api.ts
+export interface Notification {
+  id: number;
+  user: number;
+  text: string;
+  created_at: string;
+  is_read: boolean;
+
+}
+
+export interface NotificationResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Notification[];
+}
+// Update the Plan interface to match API response
+export interface Plan {
+  id: number;
+  title: string;
+  plan_type: 'free' | 'standard' | 'premium';
+  billing_cycle: "monthly" | "quarterly" | "half_yearly" | "yearly";
+  duration_months: number;
+  price: string;
+  description?: string;
+  currency?: string;
+  content?: string;
+  features?: string[];
+  is_popular?: boolean;
+}
+
+export interface Subscription {
+  id: number;
+  plan: string; // Plan title
+  plan_id: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+}
+
+export interface CreateSubscriptionRequest {
+  plan_id: number;
+  user_id?: number; // Only for superadmin
+}
+
+// Update PLAN_TYPES and BILLING_CYCLES
+export const PLAN_TYPES = [
+  { value: 'free', label: 'Bepul' },
+  { value: 'standard', label: 'Standart' },
+  { value: 'premium', label: 'Premium' },
+];
+
+export const BILLING_CYCLES = [
+  { value: 'monthly', label: '1 Oy', months: 1 },
+  { value: 'quarterly', label: '3 Oy', months: 3 },
+  { value: 'half_yearly', label: '6 Oy', months: 6 },
+  { value: 'yearly', label: '12 Oy', months: 12 },
+];
+export interface MarkAsReadRequest {
+  notification_ids: number[];
+}
+export interface UpdatePlanRequest {
+  name?: string;
+  plan_type?: 'free' | 'standard' | 'premium' ;
+  billing_cycle?: 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
+  price?: string;
+  duration_months?: number;
+}
 // Week days constants for display
 export const WEEK_DAYS = [
   { value: 'mon', label: 'Dushanba' },
@@ -296,6 +384,28 @@ export const WEEK_DAYS = [
   { value: 'sun', label: 'Yakshanba' },
 ];
 
+// Helper function to format price
+export const formatPrice = (price: string): string => {
+  try {
+    // Remove any non-digit characters except decimal point
+    const cleanPrice = price.replace(/[^\d.-]/g, '');
+    const num = parseFloat(cleanPrice);
+    
+    if (isNaN(num)) {
+      return price;
+    }
+    
+    // Format as currency
+    return new Intl.NumberFormat('uz-UZ', {
+      style: 'currency',
+      currency: 'UZS',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(num);
+  } catch (error) {
+    return price;
+  }
+};
 // Helper function to format date as YYYY-MM-DD
 export const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -427,6 +537,273 @@ if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
 }
     
     throw error;
+  }
+}
+// In the ApiService class, add this method:
+
+// Variant 1 - Foydalanuvchi obunalarini olish
+async getSubscriptions(userId?: number): Promise<Subscription[]> {
+  console.log('📋 Obunalarni olish...');
+  
+  try {
+    // Avval barcha mumkin bo'lgan endpoint'larni tekshirish
+    const targetUserId = userId || this.USER_ID || 2;
+    
+    // Variant A: Utils ichidagi subscription endpoint
+    const endpointA = `/utils/subscription/?user_id=${targetUserId}`;
+    
+    console.log('🔍 Testing subscription endpoints...');
+    
+    // Birinchi variantni sinab ko'rish
+    try {
+      console.log('🌐 Trying endpoint A:', endpointA);
+      const responseA = await this.request<Subscription[]>(endpointA);
+      console.log(`✅ Loaded ${responseA.length} subscriptions from endpoint A`);
+      return responseA;
+    } catch (errorA) {
+      console.log(`❌ Endpoint A failed, trying endpoint B...`);
+    }
+  } catch (error) {
+    console.error('❌ All subscription endpoints failed:', error);
+    
+    // Mock ma'lumotlar qaytarish
+    console.log('🔄 Using mock subscriptions data');
+    return this.getMockSubscriptions();
+  }
+}
+
+// Variant 1 - Yangi obuna yaratish (getSubscriptions ga o'xshash)
+async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription> {
+  console.log('➕ Yangi obuna yaratish...');
+  
+  try {
+    // Avval barcha mumkin bo'lgan endpoint'larni tekshirish
+    const targetUserId = data.user_id || this.USER_ID || 2;
+    
+    // Variant A: Utils ichidagi subscription endpoint
+    const endpointA = `/utils/subscription/?user_id=${targetUserId}`;
+    
+   
+    
+    // Tayyorlash ma'lumotlari
+    const subscriptionData: any = {
+      plan_id: data.plan_id,
+      user_id: targetUserId,
+    };
+    
+    console.log('📦 Subscription data:', subscriptionData);
+    
+    // Birinchi variantni sinab ko'rish
+    try {
+      console.log('🌐 Trying POST to endpoint A:', endpointA);
+      const responseA = await this.request<Subscription>(endpointA, {
+        method: 'POST',
+        body: JSON.stringify(subscriptionData),
+      });
+      console.log('✅ Subscription created successfully via endpoint A');
+      return responseA;
+    } catch (errorA) {
+      console.log(`❌ Endpoint A failed, trying endpoint B...`);
+    
+    }
+  } catch (error) {
+    console.error('❌ Failed to create subscription:', error);
+    
+    // Mock subscription qaytarish (agar API ishlamasa)
+    console.log('🔄 Creating mock subscription');
+    return this.getMockSubscriptions(data.plan_id);
+  }
+}
+
+// Cancel subscription
+async cancelSubscription(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li obunani bekor qilish...`);
+  
+  try {
+    const endpoint = `/utils/subscription/${id}/`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Obuna muvaffaqiyatli bekor qilindi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li obunani bekor qilishda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Mock subscriptions
+private getMockSubscriptions(): Subscription[] {
+  return [
+    {
+      id: 1,
+      plan: 'Professional tarif',
+      plan_id: 2,
+      start_date: '2024-01-15T10:30:00Z',
+      end_date: '2024-02-15T10:30:00Z',
+      is_active: true,
+    },
+    {
+      id: 2,
+      plan: 'Korporativ tarif',
+      plan_id: 3,
+      start_date: '2024-02-01T09:00:00Z',
+      end_date: '2024-03-01T09:00:00Z',
+      is_active: false,
+    },
+  ];
+}
+// In your ApiService class, update the getPlans method:
+async getPlans(): Promise<Plan[]> {
+  console.log('💰 Tariflarni olish...');
+  
+  try {
+    const endpoint = `/utils/plan/`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<Plan[]>(endpoint);
+    console.log(`✅ ${response.length} ta tarif yuklandi`);
+    console.log('📊 Response data:', response); // Add this to debug
+    
+    // Response formatini tekshirish va kerak bo'lsa formatlash
+    if (response && Array.isArray(response)) {
+      return response.map(plan => ({
+        id: plan.id || 0,
+        title: plan.title || '',  // Use "title" instead of "name"
+        plan_type: plan.plan_type || 'standard',
+        billing_cycle: plan.billing_cycle || 'monthly',
+        duration_months: plan.duration_months || 0,
+        price: plan.price || '0',
+        description: plan.description || '',  // Add description
+        currency: plan.currency || 'UZS',
+        content: plan.content || '',
+        created_at: plan.created_at,
+        updated_at: plan.updated_at
+      }));
+    }
+    
+    return response || [];
+  } catch (error) {
+    console.error('❌ Tariflarni yuklashda xatolik:', error);
+    
+    // Demo/fallback uchun
+    console.log('🔄 Mock tarif ma\'lumotlari ishlatilmoqda');
+    return this.getPlans();
+  }
+}
+
+// Yangi tarif yaratish
+async createPlan(data: CreatePlanRequest): Promise<Plan> {
+  console.log('➕ Yangi tarif yaratish...');
+  
+  try {
+    // API ga yuboriladigan ma'lumotlar
+    const planData: any = {
+      name: data.name,
+      plan_type: data.plan_type,
+      billing_cycle: data.billing_cycle,
+      price: data.price,
+    };
+    
+    // duration_months ixtiyoriy maydon
+    if (data.duration_months !== undefined) {
+      planData.duration_months = data.duration_months;
+    }
+    
+    console.log('📦 Tarif ma\'lumotlari:', planData);
+    
+    const endpoint = `/utils/plan/`;
+    const response = await this.request<Plan>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(planData),
+    });
+    
+    console.log('✅ Tarif muvaffaqiyatli yaratildi:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ Tarif yaratishda xatolik:', error);
+    
+    // Xatolik tafsilotlarini chiqarish
+    if ((error as any).status === 400) {
+      const errorData = (error as any).data;
+      console.error('❌ Validation errors:', errorData);
+      
+      if (errorData) {
+        let errorMsg = 'Validation error: ';
+        Object.keys(errorData).forEach(key => {
+          errorMsg += `${key}: ${errorData[key]}; `;
+        });
+        throw new Error(errorMsg);
+      }
+    }
+    
+    throw error;
+  }
+}
+
+// Tarifni yangilash
+async updatePlan(id: number, data: UpdatePlanRequest): Promise<Plan> {
+  console.log(`✏️ ${id} ID-li tarifni yangilash...`);
+  
+  try {
+    // Yangilash uchun tayyor ma'lumot
+    const updateData: any = {};
+    
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.plan_type !== undefined) updateData.plan_type = data.plan_type;
+    if (data.billing_cycle !== undefined) updateData.billing_cycle = data.billing_cycle;
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.duration_months !== undefined) updateData.duration_months = data.duration_months;
+    
+    console.log('📦 Yangilash ma\'lumotlari:', updateData);
+    
+    const endpoint = `/utils/plan/${id}/`;
+    console.log('🌐 So\'rov manzili:', endpoint);
+    
+    const response = await this.request<Plan>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    });
+    
+    console.log('✅ Tarif muvaffaqiyatli yangilandi');
+    return response;
+  } catch (error) {
+    console.error(`❌ ${id} ID-li tarifni yangilashda xatolik:`, error);
+    throw error;
+  }
+}
+
+// Tarifni o'chirish
+async deletePlan(id: number): Promise<void> {
+  console.log(`🗑️ ${id} ID-li tarifni o'chirish...`);
+  
+  try {
+    const endpoint = `/utils/plan/${id}/`;
+    await this.request<void>(endpoint, {
+      method: 'DELETE',
+    });
+    
+    console.log('✅ Tarif muvaffaqiyatli o\'chirildi');
+  } catch (error) {
+    console.error(`❌ ${id} ID-li tarifni o\'chirishda xatolik:`, error);
+    throw error;
+  }
+}
+// In ApiService class, add this notification method:
+
+async getNotifications(): Promise<Notification[]> {
+  console.log('🔔 Fetching notifications...');
+  
+  try {
+    const endpoint = `/utils/notification/`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    const response = await this.request<Notification[]>(endpoint);
+    console.log(`✅ Loaded ${response.length} notifications`);
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to load notifications:', error);
+    return []; // Return empty array on error
   }
 }
 

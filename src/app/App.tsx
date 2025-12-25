@@ -15,6 +15,7 @@ import FilialPage from '../pages/FilialPage';
 import BreakTime from '../pages/BreakTime';
 import BreakTimeManager from '../pages/BreakTime';
 import Workday from '../pages/Workday';
+import PlansPage from '../pages/PlansPage';
 
 export default function App() {
   return (
@@ -112,6 +113,16 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Workday />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/plans"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PlansPage />
                   </Layout>
                 </ProtectedRoute>
               }

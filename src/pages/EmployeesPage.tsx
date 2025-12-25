@@ -9,7 +9,6 @@ import {
   WorkDay,
   DayOff,
 } from "../lib/api";
-// ... (other imports remain the same)
 
 import {
   Card,
