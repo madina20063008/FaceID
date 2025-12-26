@@ -5,7 +5,6 @@ import { Badge } from '../app/components/ui/badge';
 import { Button } from '../app/components/ui/button';
 import { 
   Building2, 
-  User, 
   Phone, 
   Shield, 
   LogOut, 
@@ -16,17 +15,15 @@ import {
   Clock,
   Crown,
   TrendingUp,
-  Zap,
   Bell,
-  X,
-  Check,
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
 import { Progress } from '../app/components/ui/progress';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { apiService, Notification } from '../lib/api';
+import { apiService } from '../lib/api';
+import { Notification } from '../lib/types';
 
 export function ProfilePage() {
   const { user, logout } = useAuth();
@@ -452,7 +449,7 @@ export function ProfilePage() {
                           <div className="flex justify-between text-sm mb-1">
                             <span>Qolgan muddat</span>
                             <span className="font-semibold">
-                              {Math.ceil((new Date(user.subscription.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} kun
+                              {user.subscription.remaining_days} kun
                             </span>
                           </div>
                           <Progress 

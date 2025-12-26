@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, Zap, Shield, Users, Globe, CreditCard, Calendar, TrendingUp, Filter, ArrowUpDown } from 'lucide-react';
 import { apiService } from '../lib/api';
-import { Plan, Subscription } from '../lib/api';
+import { Plan, Subscription } from '../lib/types';
 
 const PlansPage = () => {
   const [plans, setPlans] = useState<Plan[]>([]);

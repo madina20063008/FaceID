@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  WorkDay, 
-  CreateWorkDayRequest,
-  UpdateWorkDayRequest,
-  DayOff,
-  CreateDayOffRequest,
-  UpdateDayOffRequest,
   WEEK_DAYS,
   apiService,
-  User 
 } from '../lib/api';
+import { CreateDayOffRequest, CreateWorkDayRequest, DayOff, UpdateDayOffRequest, UpdateWorkDayRequest, User, WorkDay } from '../lib/types';
 
 const Workday = () => {
   const [workDays, setWorkDays] = useState<WorkDay[]>([]);

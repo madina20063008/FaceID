@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  apiService,
+} from '../lib/api';
+import { 
   Branch, 
   CreateBranchRequest,
   UpdateBranchRequest,
-  apiService,
   User 
-} from '../lib/api';
+} from '../lib/types';
 
 const FilialPage = () => {
   const [branches, setBranches] = useState<Branch[]>([]);

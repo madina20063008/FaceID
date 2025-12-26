@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 import {
+  apiService,
+} from "../lib/api";
+
+import {
   Shift,
   CreateShiftRequest,
   UpdateShiftRequest,
   BreakTime,
-  apiService,
   User,
-} from "../lib/api";
-
+} from "../lib/types";
 const ShiftPage = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [breakTimes, setBreakTimes] = useState<BreakTime[]>([]); // Add break times state
