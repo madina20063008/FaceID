@@ -31,8 +31,8 @@ import {
   SquareChartGantt,
   Bell,
 } from 'lucide-react';
-import { apiService, Notification } from '../lib/api';
-
+import { apiService } from '../lib/api';
+import {  Notification } from '../lib/types';
 interface LayoutProps {
   children: ReactNode;
 }

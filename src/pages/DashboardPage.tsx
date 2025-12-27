@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   apiService,
-  DailyAttendance,
   formatDate,
-  EventSyncResponse,
-  EmployeeHistory,
 } from "../lib/api";
+import {
+  DailyAttendance,
+  EmployeeHistory,
+} from "../lib/types";
 import {
   Card,
   CardContent,

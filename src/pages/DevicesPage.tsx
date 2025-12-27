@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Device, 
   apiService,
-  User 
 } from '../lib/api';
+import { 
+  Device, 
+  User 
+} from '../lib/types';
 import {
   Card,
   CardContent,

@@ -2,13 +2,15 @@
 import { useState, useEffect } from "react";
 import {
   apiService,
+  mockEmployees,
+} from "../lib/api";
+import {
   Employee,
   CreateEmployeeRequest,
-  mockEmployees,
   Shift,
   WorkDay,
   DayOff,
-} from "../lib/api";
+} from "../lib/types";
 
 import {
   Card,

@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import {
+  apiService,
+} from "../lib/api";
+
+import {
   BreakTime,
   CreateBreakTimeRequest,
   UpdateBreakTimeRequest,
-  apiService,
   User,
-} from "../lib/api";
+} from "../lib/types";
 
 const BreakTimeManager = () => {
   const [breakTimes, setBreakTimes] = useState<BreakTime[]>([]);
