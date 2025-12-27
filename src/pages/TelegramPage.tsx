@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  apiService,
+} from '../lib/api';
+import { 
   TelegramChannel, 
   CreateTelegramChannelRequest,
   UpdateTelegramChannelRequest,
-  apiService,
   User 
-} from '../lib/api';
+} from '../lib/types';
 
 const TelegramChannelPage = () => {
   const [channels, setChannels] = useState<TelegramChannel[]>([]);
