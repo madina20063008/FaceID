@@ -16,6 +16,7 @@ import BreakTime from '../pages/BreakTime';
 import BreakTimeManager from '../pages/BreakTime';
 import Workday from '../pages/Workday';
 import PlansPage from '../pages/PlansPage';
+import Absence from '../pages/Absence';
 
 export default function App() {
   return (
@@ -123,6 +124,16 @@ export default function App() {
                 <ProtectedRoute>
                   <Layout>
                     <PlansPage />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/absence"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Absence />
                   </Layout>
                 </ProtectedRoute>
               }

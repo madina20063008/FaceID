@@ -287,7 +287,7 @@ export interface UpdateDayOffRequest {
 export interface Plan {
   id: number;
   name: string;
-  plan_type: 'standard' | 'premium' | 'enterprise';
+  plan_type: 'standard' | 'premium' | 'free';
   billing_cycle: 'monthly' | 'quarterly' | 'yearly';
   duration_months: number;
   price: string;
@@ -297,7 +297,7 @@ export interface Plan {
 
 export interface CreatePlanRequest {
   name: string;
-  plan_type: 'standard' | 'premium' | 'enterprise';
+  plan_type: 'standard' | 'premium' | 'free';
   billing_cycle: 'monthly' | 'quarterly' | 'yearly';
   price: string;
   duration_months?: number;
@@ -323,7 +323,7 @@ export interface Plan {
   id: number;
   title: string;
   plan_type: 'free' | 'standard' | 'premium';
-  billing_cycle: "monthly" | "quarterly" | "half_yearly" | "yearly";
+  billing_cycle: "monthly" | "quarterly" | "yearly";
   duration_months: number;
   price: string;
   description?: string;
@@ -360,3 +360,66 @@ export interface UpdatePlanRequest {
   duration_months?: number;
 }
 // Week days constants for display
+
+// Add to types.ts
+
+// Absent employee type
+export interface AbsentEmployee {
+  employee_id: number;
+  employee_name: string;
+  status: string;
+  status_label: string;
+  comment: string;
+  fine: number;
+  date: string;
+}
+
+// Absent employees response
+export interface AbsentEmployeesResponse {
+  date: string;
+  total: number;
+  employees: AbsentEmployee[];
+}
+
+// Update absence status request
+export interface UpdateAbsenceRequest {
+  employee_id: number;
+  date: string;
+  status: string;
+  comment?: string;
+}
+
+// Monthly report detail item
+export interface MonthlyReportDetail {
+  date: string;
+  status: string;
+  status_label: string;
+  worked: string;
+  difference: string;
+  penalty: number;
+}
+
+// Monthly report employee data
+export interface MonthlyReportEmployee {
+  employee_id: number;
+  employee_name: string;
+  year: number;
+  month: number;
+  sbk_count: number;
+  szk_count: number;
+  worked_time: string;
+  total_overtime: string;
+  total_undertime: string;
+  total_bonus: number;
+  total_penalty: number;
+  net_adjustment: number;
+  details: MonthlyReportDetail[];
+}
+
+// Monthly report response
+export interface MonthlyReportResponse {
+  year: number;
+  month: number;
+  count: number;
+  results: MonthlyReportEmployee[];
+}

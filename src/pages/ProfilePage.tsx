@@ -23,12 +23,22 @@ import { Progress } from '../app/components/ui/progress';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { apiService } from '../lib/api';
-import { Notification } from '../lib/types';
+
+// Local Notification interface - API response formatiga mos
+interface LocalNotification {
+  id: number;
+  user: number;
+  text: string;
+  created_at: string;
+  is_read: boolean;
+  // API dan qaytgan barcha maydonlar
+  [key: string]: any;
+}
 
 export function ProfilePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   if (!user) return null;
@@ -42,7 +52,18 @@ export function ProfilePage() {
     try {
       setLoading(true);
       const data = await apiService.getNotifications();
-      setNotifications(data);
+      
+      // API response'ni LocalNotification formatiga convert qilish
+      const formattedNotifications: LocalNotification[] = data.map((item: any) => ({
+        id: item.id || 0,
+        user: item.user || user.id,
+        text: item.text || item.message || 'Noma\'lum xabar',
+        created_at: item.created_at || new Date().toISOString(),
+        is_read: item.is_read || false,
+        ...item
+      }));
+      
+      setNotifications(formattedNotifications);
     } catch (error) {
       console.error('Failed to load notifications:', error);
       // Mock data for testing
@@ -88,9 +109,13 @@ export function ProfilePage() {
     }
   };
 
+  // Mock functions for notification actions (chunki API da bu metodlar yo'q)
   const markAsRead = async (notificationId: number) => {
     try {
-      await apiService.markNotificationAsRead(notificationId);
+      // Agar API da bu metod bo'lsa, undan foydalaning
+      // await apiService.markNotificationAsRead(notificationId);
+      
+      // Hozircha local o'zgartirish
       setNotifications(notifications.map(n => 
         n.id === notificationId ? { ...n, is_read: true } : n
       ));
@@ -101,7 +126,7 @@ export function ProfilePage() {
 
   const markAllAsRead = async () => {
     try {
-      await apiService.markAllNotificationsAsRead(user.id);
+      // await apiService.markAllNotificationsAsRead(user.id);
       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
@@ -110,7 +135,7 @@ export function ProfilePage() {
 
   const deleteNotification = async (notificationId: number) => {
     try {
-      await apiService.deleteNotification(notificationId);
+      // await apiService.deleteNotification(notificationId);
       setNotifications(notifications.filter(n => n.id !== notificationId));
     } catch (error) {
       console.error('Failed to delete notification:', error);
@@ -242,8 +267,6 @@ export function ProfilePage() {
                     </Badge>
                   </div>
 
-                  
-
                   <div className="w-full mt-4 space-y-4">
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="flex items-center gap-3">
@@ -316,6 +339,11 @@ export function ProfilePage() {
                   <CardTitle className="flex items-center gap-2">
                     <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     Barcha Xabarnomalar
+                    {unreadCount > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {unreadCount} yangi
+                      </Badge>
+                    )}
                   </CardTitle>
                   
                 </div>

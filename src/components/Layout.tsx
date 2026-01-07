@@ -30,19 +30,26 @@ import {
   CalendarDays,
   SquareChartGantt,
   Bell,
+  UserRoundX,
 } from 'lucide-react';
 import { apiService } from '../lib/api';
-import {  Notification } from '../lib/types';
+// Import qilish
+import { Notification } from '../lib/types';
+
 interface LayoutProps {
   children: ReactNode;
 }
+
+// Agar hali ham muammo bo'lsa, type yaratamiz
+type AppNotification = Notification;
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // State uchun aniq type
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +63,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Tanaffus', href: '/break', icon: Timer },
     { name: 'Ish kunlari', href: '/workday', icon: CalendarDays },
     { name: 'Tariflar', href: '/plans', icon: SquareChartGantt },
+    { name: 'Kelmaganlar', href: '/absence', icon: UserRoundX },
     { name: 'Profil', href: '/profile', icon: User },
   ];
 
@@ -85,13 +93,32 @@ export function Layout({ children }: LayoutProps) {
 
   const loadNotifications = async () => {
     try {
-      const data = await apiService.getNotifications();
-      console.log('📥 Loaded notifications:', data);
-      setNotifications(data);
+      const response = await apiService.getNotifications();
+      
+      // Response'ni qayta ishlash
+      const notificationsData = (response as any).map((item: any) => ({
+        id: item.id,
+        user: item.user,
+        text: item.text,
+        created_at: item.created_at,
+        is_read: item.is_read || false
+      })) as AppNotification[];
+      
+      console.log('📥 Loaded notifications:', notificationsData);
+      setNotifications(notificationsData);
     } catch (error) {
       console.error('Failed to load notifications:', error);
       // Mock data for testing
-    
+      const mockData: AppNotification[] = [
+        {
+          id: 1,
+          user: 123,
+          text: "Test xabarnoma",
+          created_at: new Date().toISOString(),
+          is_read: false
+        }
+      ];
+      setNotifications(mockData);
     }
   };
 

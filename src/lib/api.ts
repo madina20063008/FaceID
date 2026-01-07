@@ -1,4 +1,4 @@
-import { Branch, BreakTime, CreateBranchRequest, CreateBreakTimeRequest, CreateDayOffRequest, CreateEmployeeRequest, CreatePlanRequest, CreateShiftRequest, CreateSubscriptionRequest, CreateTelegramChannelRequest, CreateWorkDayRequest, DailyAttendance, DayOff, Device, DeviceResponse, Employee, EmployeeHistory, EventSyncResponse, LoginRequest, LoginResponse, PaginatedResponse, Plan, RefreshTokenResponse, Shift, Subscription, TelegramChannel, UpdateBranchRequest, UpdateBreakTimeRequest, UpdateDayOffRequest, UpdatePlanRequest, UpdateShiftRequest, UpdateTelegramChannelRequest, UpdateWorkDayRequest, User, WorkDay } from "./types";
+import { Branch, BreakTime, CreateBranchRequest, CreateBreakTimeRequest, CreateDayOffRequest, CreateEmployeeRequest, CreatePlanRequest, CreateShiftRequest, CreateSubscriptionRequest, CreateTelegramChannelRequest, CreateWorkDayRequest, DailyAttendance, DayOff, Device, DeviceResponse, Employee, EmployeeHistory, EventSyncResponse, LoginRequest, LoginResponse, Notification, PaginatedResponse, Plan, RefreshTokenResponse, Shift, Subscription, TelegramChannel, UpdateBranchRequest, UpdateBreakTimeRequest, UpdateDayOffRequest, UpdatePlanRequest, UpdateShiftRequest, UpdateTelegramChannelRequest, UpdateWorkDayRequest, User, WorkDay } from "./types";
 
 // lib/api.ts - COMPLETE WITH ALL FIXES
 const BASE_URL = 'https://45.55.129.34';
@@ -126,6 +126,7 @@ class ApiService {
     }
     return this.refreshTokenString;
   }
+
 // In api.ts, update getEmployeeHistory method:
 async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHistory[]> {
   console.log(`📅 Fetching employee history for employee ID: ${employeeId} on ${date}...`);
@@ -179,6 +180,7 @@ if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
     throw error;
   }
 }
+
 // In the ApiService class, add this method:
 
 // Variant 1 - Foydalanuvchi obunalarini olish
@@ -210,6 +212,176 @@ async getSubscriptions(userId?: number): Promise<Subscription[]> {
     console.log('🔄 Using mock subscriptions data');
     return this.getMockSubscriptions();
   }
+  
+  return [];
+}
+
+// Add to ApiService class in lib/api.ts
+
+// Get absent employees for a specific date
+async getAbsentEmployees(date: string): Promise<{
+  date: string;
+  total: number;
+  employees: Array<{
+    employee_id: number;
+    employee_name: string;
+    status: string;
+    status_label: string;
+    comment: string;
+    fine: number;
+    date: string;
+  }>;
+}> {
+  console.log(`📅 Fetching absent employees for date: ${date}`);
+  
+  try {
+    // Validate date
+    if (!date) {
+      throw new Error('Sana kiritilmagan');
+    }
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('date', date);
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/attendance/absent/?${params.toString()}`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    const response = await this.request<any>(endpoint);
+    console.log(`✅ Loaded ${response.employees?.length || 0} absent employees`);
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to load absent employees:', error);
+    
+    const err = error as any;
+    if (err.message?.includes('Sana kiritilmagan')) {
+      throw new Error('Sana kiritilmagan');
+    } else if (err.status === 404) {
+      throw new Error('Berilgan sana uchun ma\'lumot topilmadi');
+    }
+    
+    throw error;
+  }
+}
+
+// Update absence status (admin can change status)
+async updateAbsenceStatus(data: {
+  employee_id: number;
+  date: string;
+  status: string;
+  comment?: string;
+}): Promise<any> {
+  console.log('✏️ Updating absence status...');
+  
+  try {
+    // Validate required fields
+    if (!data.employee_id || !data.date || !data.status) {
+      throw new Error('Barcha majburiy maydonlarni to\'ldiring');
+    }
+    
+    // Prepare data with user_id
+    const requestData = {
+      employee_id: data.employee_id,
+      date: data.date,
+      status: data.status,
+      comment: data.comment || '',
+      user_id: this.USER_ID
+    };
+    
+    console.log('📦 Sending absence update data:', requestData);
+    
+    const endpoint = `/attendance/absent/`;
+    const response = await this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+    
+    console.log('✅ Absence status updated successfully');
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to update absence status:', error);
+    
+    const err = error as any;
+    if (err.message?.includes('Barcha majburiy maydonlarni to\'ldiring')) {
+      throw new Error('Barcha majburiy maydonlarni to\'ldiring');
+    }
+    
+    throw error;
+  }
+}
+
+// Get monthly attendance report
+async getMonthlyReport(month: number, year: number, employeeId?: number): Promise<{
+  year: number;
+  month: number;
+  count: number;
+  results: Array<{
+    employee_id: number;
+    employee_name: string;
+    year: number;
+    month: number;
+    sbk_count: number;  // Sababli kelmadi
+    szk_count: number;  // Sababsiz kelmadi
+    worked_time: string;
+    total_overtime: string;
+    total_undertime: string;
+    total_bonus: number;
+    total_penalty: number;
+    net_adjustment: number;
+    details: Array<{
+      date: string;
+      status: string;
+      status_label: string;
+      worked: string;
+      difference: string;
+      penalty: number;
+    }>;
+  }>;
+}> {
+  console.log(`📊 Fetching monthly report for ${year}-${month}...`);
+  
+  try {
+    // Validate parameters
+    if (!month || !year) {
+      throw new Error('Oy va yil kiritilishi shart');
+    }
+    
+    if (month < 1 || month > 12) {
+      throw new Error('Noto\'g\'ri oy raqami');
+    }
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('month', month.toString());
+    params.append('year', year.toString());
+    
+    if (employeeId) {
+      params.append('employee_id', employeeId.toString());
+    }
+    
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/attendance/report/monthly/?${params.toString()}`;
+    console.log('🌐 Making request to:', endpoint);
+    
+    const response = await this.request<any>(endpoint);
+    console.log(`✅ Loaded monthly report with ${response.results?.length || 0} employees`);
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to load monthly report:', error);
+    
+    const err = error as any;
+    if (err.message?.includes('Oy va yil kiritilishi shart')) {
+      throw new Error('Oy va yil kiritilishi shart');
+    } else if (err.message?.includes('Noto\'g\'ri oy raqami')) {
+      throw new Error('Noto\'g\'ri oy raqami (1-12 oralig\'ida bo\'lishi kerak)');
+    }
+    
+    throw error;
+  }
 }
 
 // Variant 1 - Yangi obuna yaratish (getSubscriptions ga o'xshash)
@@ -222,8 +394,6 @@ async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription>
     
     // Variant A: Utils ichidagi subscription endpoint
     const endpointA = `/utils/subscription/?user_id=${targetUserId}`;
-    
-   
     
     // Tayyorlash ma'lumotlari
     const subscriptionData: any = {
@@ -244,15 +414,17 @@ async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription>
       return responseA;
     } catch (errorA) {
       console.log(`❌ Endpoint A failed, trying endpoint B...`);
-    
     }
   } catch (error) {
     console.error('❌ Failed to create subscription:', error);
     
     // Mock subscription qaytarish (agar API ishlamasa)
     console.log('🔄 Creating mock subscription');
-    return this.getMockSubscriptions(data.plan_id);
+    return this.getMockSubscription(data.plan_id);
   }
+  
+  // Fallback
+  return this.getMockSubscription(data.plan_id);
 }
 
 // Cancel subscription
@@ -293,6 +465,19 @@ private getMockSubscriptions(): Subscription[] {
     },
   ];
 }
+
+// Mock subscription for create method
+private getMockSubscription(planId: number): Subscription {
+  return {
+    id: Date.now(),
+    plan: `Mock Plan ${planId}`,
+    plan_id: planId,
+    start_date: new Date().toISOString(),
+    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days later
+    is_active: true,
+  };
+}
+
 // In your ApiService class, update the getPlans method:
 async getPlans(): Promise<Plan[]> {
   console.log('💰 Tariflarni olish...');
@@ -309,12 +494,13 @@ async getPlans(): Promise<Plan[]> {
     if (response && Array.isArray(response)) {
       return response.map(plan => ({
         id: plan.id || 0,
-        title: plan.title || '',  // Use "title" instead of "name"
+        name: plan.name || plan.title || '',  // FIX: Use "name" which is required by Plan interface
+        title: plan.title || plan.name || '', // Also include title if needed
         plan_type: plan.plan_type || 'standard',
         billing_cycle: plan.billing_cycle || 'monthly',
         duration_months: plan.duration_months || 0,
         price: plan.price || '0',
-        description: plan.description || '',  // Add description
+        description: plan.description || '',
         currency: plan.currency || 'UZS',
         content: plan.content || '',
         created_at: plan.created_at,
@@ -328,7 +514,7 @@ async getPlans(): Promise<Plan[]> {
     
     // Demo/fallback uchun
     console.log('🔄 Mock tarif ma\'lumotlari ishlatilmoqda');
-    return this.getPlans();
+    return this.getMockPlans();
   }
 }
 
@@ -429,7 +615,54 @@ async deletePlan(id: number): Promise<void> {
     throw error;
   }
 }
-// In ApiService class, add this notification method:
+
+// Mock plans
+private getMockPlans(): Plan[] {
+  return [
+    {
+      id: 1,
+      name: 'Bepul tarif',
+      title: 'Bepul tarif',
+      plan_type: 'free',
+      billing_cycle: 'monthly',
+      duration_months: 0,
+      price: '0',
+      description: 'Bepul tarif',
+      currency: 'UZS',
+      content: '',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 2,
+      name: 'Standart tarif',
+      title: 'Standart tarif',
+      plan_type: 'standard',
+      billing_cycle: 'monthly',
+      duration_months: 1,
+      price: '500000',
+      description: 'Standart tarif',
+      currency: 'UZS',
+      content: '',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    },
+    {
+      id: 3,
+      name: 'Premium tarif',
+      title: 'Premium tarif',
+      plan_type: 'premium',
+      billing_cycle: 'monthly',
+      duration_months: 1,
+      price: '1000000',
+      description: 'Premium tarif',
+      currency: 'UZS',
+      content: '',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    }
+  ];
+}
 
 async getNotifications(): Promise<Notification[]> {
   console.log('🔔 Fetching notifications...');

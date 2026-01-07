@@ -37,21 +37,53 @@ const PlansPage = () => {
     }
   };
 
+  // Fix formatPrice function to always return object
+  const formatPrice = (price: string, months: number = 1): { perMonth: string; total: string; numeric: number } => {
+    try {
+      const cleanPrice = price.replace(/[^\d.-]/g, '');
+      const num = parseFloat(cleanPrice);
+      
+      if (isNaN(num)) {
+        return { perMonth: price, total: price, numeric: 0 };
+      }
+      
+      const pricePerMonth = selectedBilling === 'yearly' ? num / 12 : num;
+      const totalPrice = selectedBilling === 'yearly' ? num * months : num;
+      
+      const perMonthFormatted = new Intl.NumberFormat('uz-UZ', {
+        style: 'currency',
+        currency: 'UZS',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(pricePerMonth);
+      
+      const totalFormatted = new Intl.NumberFormat('uz-UZ', {
+        style: 'currency',
+        currency: 'UZS',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(totalPrice);
+      
+      return {
+        perMonth: perMonthFormatted,
+        total: totalFormatted,
+        numeric: num,
+      };
+    } catch (error) {
+      console.error('Error formatting price:', error);
+      return { perMonth: price, total: price, numeric: 0 };
+    }
+  };
+
   // Sort plans based on selected criteria
   const sortedPlans = useMemo(() => {
     const plansCopy = [...plans];
     
     if (activeSort === 'price') {
       plansCopy.sort((a, b) => {
-        // Extract numeric price from string
-        const getNumericPrice = (price: string) => {
-          const cleanPrice = price.replace(/[^\d.-]/g, '');
-          const num = parseFloat(cleanPrice);
-          return isNaN(num) ? 0 : num;
-        };
-        
-        const priceA = getNumericPrice(a.price);
-        const priceB = getNumericPrice(b.price);
+        // Use the formatPrice function to get numeric value
+        const priceA = formatPrice(a.price).numeric;
+        const priceB = formatPrice(b.price).numeric;
         
         // Adjust for billing cycle
         const adjustedPriceA = selectedBilling === 'yearly' ? priceA : priceA;
@@ -65,14 +97,8 @@ const PlansPage = () => {
         if (a.is_popular && !b.is_popular) return -1;
         if (!a.is_popular && b.is_popular) return 1;
         
-        const getNumericPrice = (price: string) => {
-          const cleanPrice = price.replace(/[^\d.-]/g, '');
-          const num = parseFloat(cleanPrice);
-          return isNaN(num) ? 0 : num;
-        };
-        
-        const priceA = getNumericPrice(a.price);
-        const priceB = getNumericPrice(b.price);
+        const priceA = formatPrice(a.price).numeric;
+        const priceB = formatPrice(b.price).numeric;
         const adjustedPriceA = selectedBilling === 'yearly' ? priceA : priceA;
         const adjustedPriceB = selectedBilling === 'yearly' ? priceB : priceB;
         
@@ -115,36 +141,6 @@ const PlansPage = () => {
 
   const isPlanSubscribed = (planId: number) => {
     return subscriptions.some(sub => sub.plan_id === planId && sub.is_active);
-  };
-
-  const formatPrice = (price: string, months: number = 1) => {
-    try {
-      const cleanPrice = price.replace(/[^\d.-]/g, '');
-      const num = parseFloat(cleanPrice);
-      
-      if (isNaN(num)) return price;
-      
-      const pricePerMonth = selectedBilling === 'yearly' ? num / 12 : num;
-      const totalPrice = selectedBilling === 'yearly' ? num * months : num;
-      
-      return {
-        perMonth: new Intl.NumberFormat('uz-UZ', {
-          style: 'currency',
-          currency: 'UZS',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(pricePerMonth),
-        total: new Intl.NumberFormat('uz-UZ', {
-          style: 'currency',
-          currency: 'UZS',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(totalPrice),
-        numeric: num,
-      };
-    } catch (error) {
-      return { perMonth: price, total: price, numeric: 0 };
-    }
   };
 
   const getPlanFeatures = (plan: Plan) => {
@@ -202,9 +198,7 @@ const PlansPage = () => {
     if (sortedPlans.length === 0) return { min: 0, max: 0 };
     
     const prices = sortedPlans.map(plan => {
-      const cleanPrice = plan.price.replace(/[^\d.-]/g, '');
-      const num = parseFloat(cleanPrice);
-      return isNaN(num) ? 0 : num;
+      return formatPrice(plan.price).numeric;
     });
     
     return {
@@ -270,8 +264,6 @@ const PlansPage = () => {
                   {sortOrder === 'asc' ? '↑ Pastdan' : '↓ Yuqoridan'}
                 </span>
               </button>
-
-              
 
               {/* Billing Cycle Toggle */}
               

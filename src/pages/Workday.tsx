@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  WEEK_DAYS,
-  apiService,
-} from '../lib/api';
-import { CreateDayOffRequest, CreateWorkDayRequest, DayOff, UpdateDayOffRequest, UpdateWorkDayRequest, User, WorkDay } from '../lib/types';
+import React, { useState, useEffect } from "react";
+import { WEEK_DAYS, apiService } from "../lib/api";
+import {
+  CreateDayOffRequest,
+  CreateWorkDayRequest,
+  DayOff,
+  UpdateDayOffRequest,
+  UpdateWorkDayRequest,
+  User,
+  WorkDay,
+} from "../lib/types";
 
 const Workday = () => {
   const [workDays, setWorkDays] = useState<WorkDay[]>([]);
@@ -12,34 +17,36 @@ const Workday = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [targetUserId, setTargetUserId] = useState<string>('');
-  
+  const [targetUserId, setTargetUserId] = useState<string>("");
+
   // Dialog states
   const [showAddWorkDay, setShowAddWorkDay] = useState(false);
   const [showEditWorkDay, setShowEditWorkDay] = useState<WorkDay | null>(null);
   const [showAddDayOff, setShowAddDayOff] = useState(false);
   const [showEditDayOff, setShowEditDayOff] = useState<DayOff | null>(null);
-  
+
   // Form states
   const [newWorkDay, setNewWorkDay] = useState<CreateWorkDayRequest>({
-    name: '',
+    name: "",
     days: [],
   });
   const [editWorkDay, setEditWorkDay] = useState<UpdateWorkDayRequest>({
-    name: '',
+    name: "",
     days: [],
   });
   const [newDayOff, setNewDayOff] = useState<CreateDayOffRequest>({
-    name: '',
+    name: "",
     days: [],
   });
   const [editDayOff, setEditDayOff] = useState<UpdateDayOffRequest>({
-    name: '',
+    name: "",
     days: [],
   });
-  
+
   // Tabs
-  const [activeTab, setActiveTab] = useState<'workdays' | 'dayoffs'>('workdays');
+  const [activeTab, setActiveTab] = useState<"workdays" | "dayoffs">(
+    "workdays"
+  );
 
   // Load data
   useEffect(() => {
@@ -51,27 +58,27 @@ const Workday = () => {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      
+
       // Get current user
       const user = await apiService.getCurrentUser();
       setCurrentUser(user);
-      
+
       // Load both workdays and dayoffs
       const [workDaysData, dayOffsData] = await Promise.all([
         apiService.getWorkDays(userId),
-        apiService.getDayOffs(userId)
+        apiService.getDayOffs(userId),
       ]);
-      
+
       setWorkDays(workDaysData);
       setDayOffs(dayOffsData);
     } catch (err: any) {
-      console.error('Ma\'lumotlarni yuklashda xatolik:', err);
-      
+      console.error("Ma'lumotlarni yuklashda xatolik:", err);
+
       // Show more specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else {
-        setError(err.message || 'Ma\'lumotlarni yuklashda xatolik');
+        setError(err.message || "Ma'lumotlarni yuklashda xatolik");
       }
     } finally {
       setLoading(false);
@@ -80,52 +87,52 @@ const Workday = () => {
 
   const handleLoadUserData = async () => {
     if (!targetUserId.trim()) {
-      setError('Iltimos, foydalanuvchi ID-sini kiriting');
+      setError("Iltimos, foydalanuvchi ID-sini kiriting");
       return;
     }
-    
+
     const userId = parseInt(targetUserId);
     if (isNaN(userId)) {
-      setError('Noto\'g\'ri foydalanuvchi ID-si');
+      setError("Noto'g'ri foydalanuvchi ID-si");
       return;
     }
-    
+
     await loadCurrentUserAndData(userId);
   };
 
   // WorkDay handlers
   const handleAddWorkDay = async () => {
     if (!newWorkDay.name || newWorkDay.days.length === 0) {
-      setError('Iltimos, nom va kamida bitta kunni tanlang');
+      setError("Iltimos, nom va kamida bitta kunni tanlang");
       return;
     }
-    
+
     try {
       const formattedData: CreateWorkDayRequest = {
         name: newWorkDay.name,
         days: newWorkDay.days,
       };
-      
+
       // If superadmin and user ID is provided
-      if (currentUser?.role === 'superadmin' && newWorkDay.user) {
+      if (currentUser?.role === "superadmin" && newWorkDay.user) {
         formattedData.user = newWorkDay.user;
       }
-      
-      console.log('📤 Ish kunlari yaratish ma\'lumotlari:', formattedData);
-      
+
+      console.log("📤 Ish kunlari yaratish ma'lumotlari:", formattedData);
+
       await apiService.createWorkDay(formattedData);
-      
+
       // Reload data
       await loadCurrentUserAndData();
       setShowAddWorkDay(false);
       setNewWorkDay({
-        name: '',
+        name: "",
         days: [],
       });
-      setSuccess('Ish kunlari muvaffaqiyatli yaratildi');
+      setSuccess("Ish kunlari muvaffaqiyatli yaratildi");
     } catch (err: any) {
-      console.error('Ish kunlari yaratish xatosi:', err);
-      
+      console.error("Ish kunlari yaratish xatosi:", err);
+
       // Show specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
@@ -134,44 +141,47 @@ const Workday = () => {
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Ish kunlari yaratishda xatolik');
+        setError("Ish kunlari yaratishda xatolik");
       }
     }
   };
 
   const handleEditWorkDay = async () => {
     if (!showEditWorkDay) return;
-    
+
     try {
       const updateData: UpdateWorkDayRequest = {};
-      
+
       if (editWorkDay.name && editWorkDay.name !== showEditWorkDay.name) {
         updateData.name = editWorkDay.name;
       }
-      
+
       if (editWorkDay.days && editWorkDay.days.length > 0) {
         updateData.days = editWorkDay.days;
       }
-      
-      if (currentUser?.role === 'superadmin' && editWorkDay.user !== undefined) {
+
+      if (
+        currentUser?.role === "superadmin" &&
+        editWorkDay.user !== undefined
+      ) {
         updateData.user = editWorkDay.user;
       }
-      
-      console.log('✏️ Ish kunlarini yangilash ma\'lumotlari:', updateData);
-      
+
+      console.log("✏️ Ish kunlarini yangilash ma'lumotlari:", updateData);
+
       await apiService.updateWorkDay(showEditWorkDay.id, updateData);
-      
+
       // Reload data
       await loadCurrentUserAndData();
       setShowEditWorkDay(null);
       setEditWorkDay({
-        name: '',
+        name: "",
         days: [],
       });
-      setSuccess('Ish kunlari muvaffaqiyatli yangilandi');
+      setSuccess("Ish kunlari muvaffaqiyatli yangilandi");
     } catch (err: any) {
-      console.error('Ish kunlarini yangilash xatosi:', err);
-      
+      console.error("Ish kunlarini yangilash xatosi:", err);
+
       // Show specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
@@ -180,31 +190,33 @@ const Workday = () => {
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Ish kunlarini yangilashda xatolik');
+        setError("Ish kunlarini yangilashda xatolik");
       }
     }
   };
 
   const handleDeleteWorkDay = async (id: number) => {
-    if (!window.confirm('Haqiqatan ham ushbu ish kunlarini o\'chirmoqchimisiz?')) {
+    if (
+      !window.confirm("Haqiqatan ham ushbu ish kunlarini o'chirmoqchimisiz?")
+    ) {
       return;
     }
-    
+
     try {
       await apiService.deleteWorkDay(id);
       // Reload data
       await loadCurrentUserAndData();
-      setSuccess('Ish kunlari muvaffaqiyatli o\'chirildi');
+      setSuccess("Ish kunlari muvaffaqiyatli o'chirildi");
     } catch (err: any) {
-      console.error('Ish kunlarini o\'chirish xatosi:', err);
-      
+      console.error("Ish kunlarini o'chirish xatosi:", err);
+
       // Show specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Ish kunlarini o\'chirishda xatolik');
+        setError("Ish kunlarini o'chirishda xatolik");
       }
     }
   };
@@ -212,34 +224,34 @@ const Workday = () => {
   // DayOff handlers
   const handleAddDayOff = async () => {
     if (!newDayOff.name || newDayOff.days.length === 0) {
-      setError('Iltimos, nom va kamida bitta kunni tanlang');
+      setError("Iltimos, nom va kamida bitta kunni tanlang");
       return;
     }
-    
+
     try {
       const formattedData: CreateDayOffRequest = {
         name: newDayOff.name,
         days: newDayOff.days,
       };
-      
-      if (currentUser?.role === 'superadmin' && newDayOff.user) {
+
+      if (currentUser?.role === "superadmin" && newDayOff.user) {
         formattedData.user = newDayOff.user;
       }
-      
-      console.log('📤 Dam olish kunlari yaratish ma\'lumotlari:', formattedData);
-      
+
+      console.log("📤 Dam olish kunlari yaratish ma'lumotlari:", formattedData);
+
       await apiService.createDayOff(formattedData);
-      
+
       await loadCurrentUserAndData();
       setShowAddDayOff(false);
       setNewDayOff({
-        name: '',
+        name: "",
         days: [],
       });
-      setSuccess('Dam olish kunlari muvaffaqiyatli yaratildi');
+      setSuccess("Dam olish kunlari muvaffaqiyatli yaratildi");
     } catch (err: any) {
-      console.error('Dam olish kunlari yaratish xatosi:', err);
-      
+      console.error("Dam olish kunlari yaratish xatosi:", err);
+
       // Show specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
@@ -248,43 +260,43 @@ const Workday = () => {
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Dam olish kunlari yaratishda xatolik');
+        setError("Dam olish kunlari yaratishda xatolik");
       }
     }
   };
 
   const handleEditDayOff = async () => {
     if (!showEditDayOff) return;
-    
+
     try {
       const updateData: UpdateDayOffRequest = {};
-      
+
       if (editDayOff.name && editDayOff.name !== showEditDayOff.name) {
         updateData.name = editDayOff.name;
       }
-      
+
       if (editDayOff.days && editDayOff.days.length > 0) {
         updateData.days = editDayOff.days;
       }
-      
-      if (currentUser?.role === 'superadmin' && editDayOff.user !== undefined) {
+
+      if (currentUser?.role === "superadmin" && editDayOff.user !== undefined) {
         updateData.user = editDayOff.user;
       }
-      
-      console.log('✏️ Dam olish kunlarini yangilash ma\'lumotlari:', updateData);
-      
+
+      console.log("✏️ Dam olish kunlarini yangilash ma'lumotlari:", updateData);
+
       await apiService.updateDayOff(showEditDayOff.id, updateData);
-      
+
       await loadCurrentUserAndData();
       setShowEditDayOff(null);
       setEditDayOff({
-        name: '',
+        name: "",
         days: [],
       });
-      setSuccess('Dam olish kunlari muvaffaqiyatli yangilandi');
+      setSuccess("Dam olish kunlari muvaffaqiyatli yangilandi");
     } catch (err: any) {
-      console.error('Dam olish kunlarini yangilash xatosi:', err);
-      
+      console.error("Dam olish kunlarini yangilash xatosi:", err);
+
       // Show specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
@@ -293,67 +305,71 @@ const Workday = () => {
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Dam olish kunlarini yangilashda xatolik');
+        setError("Dam olish kunlarini yangilashda xatolik");
       }
     }
   };
 
   const handleDeleteDayOff = async (id: number) => {
-    if (!window.confirm('Haqiqatan ham ushbu dam olish kunlarini o\'chirmoqchimisiz?')) {
+    if (
+      !window.confirm(
+        "Haqiqatan ham ushbu dam olish kunlarini o'chirmoqchimisiz?"
+      )
+    ) {
       return;
     }
-    
+
     try {
       await apiService.deleteDayOff(id);
       await loadCurrentUserAndData();
-      setSuccess('Dam olish kunlari muvaffaqiyatli o\'chirildi');
+      setSuccess("Dam olish kunlari muvaffaqiyatli o'chirildi");
     } catch (err: any) {
-      console.error('Dam olish kunlarini o\'chirish xatosi:', err);
-      
+      console.error("Dam olish kunlarini o'chirish xatosi:", err);
+
       // Show specific API error
       if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Dam olish kunlarini o\'chirishda xatolik');
+        setError("Dam olish kunlarini o'chirishda xatolik");
       }
     }
   };
 
   // Helper functions
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Noma\'lum';
-    return new Date(dateString).toLocaleString('uz-UZ', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (!dateString) return "Noma'lum";
+    return new Date(dateString).toLocaleString("uz-UZ", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getFullDayNames = (days: string[]): string => {
     const dayMap: Record<string, string> = {
-      'mon': 'Dushanba',
-      'tue': 'Seshanba',
-      'wed': 'Chorshanba',
-      'thu': 'Payshanba',
-      'fri': 'Juma',
-      'sat': 'Shanba',
-      'sun': 'Yakshanba'
+      mon: "Dushanba",
+      tue: "Seshanba",
+      wed: "Chorshanba",
+      thu: "Payshanba",
+      fri: "Juma",
+      sat: "Shanba",
+      sun: "Yakshanba",
     };
-    
-    return days.map(day => dayMap[day] || day).join(', ');
+
+    return days.map((day) => dayMap[day] || day).join(", ");
   };
 
   const toggleDaySelection = (
-    day: string, 
-    currentDays: string[], 
-    setDays: React.Dispatch<React.SetStateAction<string[]>>
+    day: string,
+    currentDays: string[],
+    setDays: (days: string[]) => void
   ) => {
     if (currentDays.includes(day)) {
-      setDays(currentDays.filter(d => d !== day));
+      setDays(currentDays.filter((d) => d !== day));
     } else {
       setDays([...currentDays, day]);
     }
@@ -380,7 +396,9 @@ const Workday = () => {
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Ma'lumotlar yuklanmoqda...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Ma'lumotlar yuklanmoqda...
+          </p>
         </div>
       </div>
     );
@@ -391,15 +409,17 @@ const Workday = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Ish va Dam Olish Kunlari</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Ish va Dam Olish Kunlari
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Ish kunlari va dam olish kunlarini boshqarish
           </p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
           {/* Superadmin: Load another user's data */}
-          {currentUser?.role === 'superadmin' && (
+          {currentUser?.role === "superadmin" && (
             <div className="flex gap-2">
               <input
                 type="text"
@@ -426,7 +446,7 @@ const Workday = () => {
             <span>✅</span>
             <span>{success}</span>
           </div>
-          <button 
+          <button
             onClick={() => setSuccess(null)}
             className="mt-2 text-sm text-green-600 dark:text-green-300 hover:text-green-800 dark:hover:text-green-200"
           >
@@ -434,14 +454,14 @@ const Workday = () => {
           </button>
         </div>
       )}
-      
+
       {error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>{error}</span>
           </div>
-          <button 
+          <button
             onClick={() => setError(null)}
             className="mt-2 text-sm text-red-600 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200"
           >
@@ -455,11 +475,11 @@ const Workday = () => {
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             <button
-              onClick={() => setActiveTab('workdays')}
+              onClick={() => setActiveTab("workdays")}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'workdays'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                activeTab === "workdays"
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
               }`}
             >
               Ish Kunlari
@@ -468,11 +488,11 @@ const Workday = () => {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('dayoffs')}
+              onClick={() => setActiveTab("dayoffs")}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'dayoffs'
-                  ? 'border-purple-500 text-purple-600 dark:text-purple-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                activeTab === "dayoffs"
+                  ? "border-purple-500 text-purple-600 dark:text-purple-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
               }`}
             >
               Dam Olish Kunlari
@@ -485,10 +505,12 @@ const Workday = () => {
       </div>
 
       {/* WorkDays Section */}
-      {activeTab === 'workdays' && (
+      {activeTab === "workdays" && (
         <>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Ish Kunlari Ro'yxati</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Ish Kunlari Ro'yxati
+            </h2>
             <button
               onClick={() => setShowAddWorkDay(true)}
               className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition flex items-center gap-2"
@@ -501,7 +523,9 @@ const Workday = () => {
           {/* WorkDays List */}
           {workDays.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-              <div className="text-gray-400 dark:text-gray-500 mb-4 text-6xl">📅</div>
+              <div className="text-gray-400 dark:text-gray-500 mb-4 text-6xl">
+                📅
+              </div>
               <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
                 Ish kunlari topilmadi
               </h3>
@@ -540,12 +564,17 @@ const Workday = () => {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {workDays.map((workDay, index) => (
-                      <tr key={workDay.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <tr
+                        key={workDay.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      >
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                           {index + 1}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900 dark:text-white">{workDay.name}</div>
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {workDay.name}
+                          </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             ID: {workDay.id}
                           </div>
@@ -562,8 +591,8 @@ const Workday = () => {
                                 key={day.value}
                                 className={`px-2 py-1 text-xs rounded-full ${
                                   workDay.days.includes(day.value)
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
-                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                                 }`}
                               >
                                 {day.label.substring(0, 3)}
@@ -576,7 +605,8 @@ const Workday = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900 dark:text-white">
-                            <span className="font-medium">ID:</span> {workDay.user}
+                            <span className="font-medium">ID:</span>{" "}
+                            {workDay.user}
                             {currentUser?.id === workDay.user && (
                               <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded">
                                 Siz
@@ -616,7 +646,7 @@ const Workday = () => {
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                     Yangi Ish Kunlari Qo'shish
                   </h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -625,12 +655,14 @@ const Workday = () => {
                       <input
                         type="text"
                         value={newWorkDay.name}
-                        onChange={(e) => setNewWorkDay({...newWorkDay, name: e.target.value})}
+                        onChange={(e) =>
+                          setNewWorkDay({ ...newWorkDay, name: e.target.value })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                         placeholder="Masalan: Oddiy ish haftasi"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Kunlar *
@@ -640,12 +672,17 @@ const Workday = () => {
                           <button
                             key={day.value}
                             type="button"
-                            onClick={() => toggleDaySelection(day.value, newWorkDay.days, (days) => 
-                              setNewWorkDay({...newWorkDay, days}))}
+                            onClick={() =>
+                              toggleDaySelection(
+                                day.value,
+                                newWorkDay.days,
+                                (days) => setNewWorkDay({ ...newWorkDay, days })
+                              )
+                            }
                             className={`px-3 py-2 text-sm rounded-md transition ${
                               newWorkDay.days.includes(day.value)
-                                ? 'bg-blue-600 dark:bg-blue-700 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ? "bg-blue-600 dark:bg-blue-700 text-white"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                             }`}
                           >
                             {day.label}
@@ -653,30 +690,35 @@ const Workday = () => {
                         ))}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        Tanlangan kunlar: {getFullDayNames(newWorkDay.days) || 'Hech qaysi'}
+                        Tanlangan kunlar:{" "}
+                        {getFullDayNames(newWorkDay.days) || "Hech qaysi"}
                       </p>
                     </div>
-                    
+
                     {/* Superadmin: Assign to user */}
-                    {currentUser?.role === 'superadmin' && (
+                    {currentUser?.role === "superadmin" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Foydalanuvchi ID-siga biriktirish (ixtiyoriy)
                         </label>
                         <input
                           type="number"
-                          value={newWorkDay.user || ''}
-                          onChange={(e) => setNewWorkDay({
-                            ...newWorkDay, 
-                            user: e.target.value ? parseInt(e.target.value) : undefined
-                          })}
+                          value={newWorkDay.user || ""}
+                          onChange={(e) =>
+                            setNewWorkDay({
+                              ...newWorkDay,
+                              user: e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            })
+                          }
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                           placeholder="O'zingiz uchun bo'sh qoldiring"
                         />
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-6 flex justify-end gap-3">
                     <button
                       onClick={() => setShowAddWorkDay(false)}
@@ -704,7 +746,7 @@ const Workday = () => {
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                     Ish Kunlarini Tahrirlash
                   </h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -712,12 +754,17 @@ const Workday = () => {
                       </label>
                       <input
                         type="text"
-                        value={editWorkDay.name || ''}
-                        onChange={(e) => setEditWorkDay({...editWorkDay, name: e.target.value})}
+                        value={editWorkDay.name || ""}
+                        onChange={(e) =>
+                          setEditWorkDay({
+                            ...editWorkDay,
+                            name: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Kunlar
@@ -727,12 +774,18 @@ const Workday = () => {
                           <button
                             key={day.value}
                             type="button"
-                            onClick={() => toggleDaySelection(day.value, editWorkDay.days || [], (days) => 
-                              setEditWorkDay({...editWorkDay, days}))}
+                            onClick={() =>
+                              toggleDaySelection(
+                                day.value,
+                                editWorkDay.days || [],
+                                (days) =>
+                                  setEditWorkDay({ ...editWorkDay, days })
+                              )
+                            }
                             className={`px-3 py-2 text-sm rounded-md transition ${
                               (editWorkDay.days || []).includes(day.value)
-                                ? 'bg-blue-600 dark:bg-blue-700 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ? "bg-blue-600 dark:bg-blue-700 text-white"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                             }`}
                           >
                             {day.label}
@@ -743,20 +796,24 @@ const Workday = () => {
                         Joriy kunlar: {getFullDayNames(showEditWorkDay.days)}
                       </p>
                     </div>
-                    
+
                     {/* Superadmin: Change user */}
-                    {currentUser?.role === 'superadmin' && (
+                    {currentUser?.role === "superadmin" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Foydalanuvchi ID-si
                         </label>
                         <input
                           type="number"
-                          value={editWorkDay.user || ''}
-                          onChange={(e) => setEditWorkDay({
-                            ...editWorkDay, 
-                            user: e.target.value ? parseInt(e.target.value) : undefined
-                          })}
+                          value={editWorkDay.user || ""}
+                          onChange={(e) =>
+                            setEditWorkDay({
+                              ...editWorkDay,
+                              user: e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            })
+                          }
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -765,7 +822,7 @@ const Workday = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-6 flex justify-between">
                     <button
                       onClick={() => handleDeleteWorkDay(showEditWorkDay.id)}
@@ -773,7 +830,7 @@ const Workday = () => {
                     >
                       O'chirish
                     </button>
-                    
+
                     <div className="flex gap-3">
                       <button
                         onClick={() => setShowEditWorkDay(null)}
@@ -797,10 +854,12 @@ const Workday = () => {
       )}
 
       {/* DayOffs Section */}
-      {activeTab === 'dayoffs' && (
+      {activeTab === "dayoffs" && (
         <>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Dam Olish Kunlari Ro'yxati</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Dam Olish Kunlari Ro'yxati
+            </h2>
             <button
               onClick={() => setShowAddDayOff(true)}
               className="px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition flex items-center gap-2"
@@ -813,12 +872,15 @@ const Workday = () => {
           {/* DayOffs List */}
           {dayOffs.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-              <div className="text-gray-400 dark:text-gray-500 mb-4 text-6xl">🏖️</div>
+              <div className="text-gray-400 dark:text-gray-500 mb-4 text-6xl">
+                🏖️
+              </div>
               <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
                 Dam olish kunlari topilmadi
               </h3>
               <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
-                Birinchi dam olish kunlarini qo'shish uchun quyidagi tugmani bosing
+                Birinchi dam olish kunlarini qo'shish uchun quyidagi tugmani
+                bosing
               </p>
               <button
                 onClick={() => setShowAddDayOff(true)}
@@ -852,12 +914,17 @@ const Workday = () => {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {dayOffs.map((dayOff, index) => (
-                      <tr key={dayOff.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <tr
+                        key={dayOff.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                      >
                         <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                           {index + 1}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900 dark:text-white">{dayOff.name}</div>
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {dayOff.name}
+                          </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             ID: {dayOff.id}
                           </div>
@@ -874,8 +941,8 @@ const Workday = () => {
                                 key={day.value}
                                 className={`px-2 py-1 text-xs rounded-full ${
                                   dayOff.days.includes(day.value)
-                                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300'
-                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                    ? "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                                 }`}
                               >
                                 {day.label.substring(0, 3)}
@@ -888,7 +955,8 @@ const Workday = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900 dark:text-white">
-                            <span className="font-medium">ID:</span> {dayOff.user}
+                            <span className="font-medium">ID:</span>{" "}
+                            {dayOff.user}
                             {currentUser?.id === dayOff.user && (
                               <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded">
                                 Siz
@@ -928,7 +996,7 @@ const Workday = () => {
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                     Yangi Dam Olish Kunlari Qo'shish
                   </h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -937,12 +1005,14 @@ const Workday = () => {
                       <input
                         type="text"
                         value={newDayOff.name}
-                        onChange={(e) => setNewDayOff({...newDayOff, name: e.target.value})}
+                        onChange={(e) =>
+                          setNewDayOff({ ...newDayOff, name: e.target.value })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                         placeholder="Masalan: Bayram kunlari"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Kunlar *
@@ -952,12 +1022,17 @@ const Workday = () => {
                           <button
                             key={day.value}
                             type="button"
-                            onClick={() => toggleDaySelection(day.value, newDayOff.days, (days) => 
-                              setNewDayOff({...newDayOff, days}))}
+                            onClick={() =>
+                              toggleDaySelection(
+                                day.value,
+                                newDayOff.days,
+                                (days) => setNewDayOff({ ...newDayOff, days })
+                              )
+                            }
                             className={`px-3 py-2 text-sm rounded-md transition ${
                               newDayOff.days.includes(day.value)
-                                ? 'bg-purple-600 dark:bg-purple-700 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ? "bg-purple-600 dark:bg-purple-700 text-white"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                             }`}
                           >
                             {day.label}
@@ -965,30 +1040,35 @@ const Workday = () => {
                         ))}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        Tanlangan kunlar: {getFullDayNames(newDayOff.days) || 'Hech qaysi'}
+                        Tanlangan kunlar:{" "}
+                        {getFullDayNames(newDayOff.days) || "Hech qaysi"}
                       </p>
                     </div>
-                    
+
                     {/* Superadmin: Assign to user */}
-                    {currentUser?.role === 'superadmin' && (
+                    {currentUser?.role === "superadmin" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Foydalanuvchi ID-siga biriktirish (ixtiyoriy)
                         </label>
                         <input
                           type="number"
-                          value={newDayOff.user || ''}
-                          onChange={(e) => setNewDayOff({
-                            ...newDayOff, 
-                            user: e.target.value ? parseInt(e.target.value) : undefined
-                          })}
+                          value={newDayOff.user || ""}
+                          onChange={(e) =>
+                            setNewDayOff({
+                              ...newDayOff,
+                              user: e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            })
+                          }
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                           placeholder="O'zingiz uchun bo'sh qoldiring"
                         />
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-6 flex justify-end gap-3">
                     <button
                       onClick={() => setShowAddDayOff(false)}
@@ -1016,7 +1096,7 @@ const Workday = () => {
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                     Dam Olish Kunlarini Tahrirlash
                   </h2>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -1024,12 +1104,14 @@ const Workday = () => {
                       </label>
                       <input
                         type="text"
-                        value={editDayOff.name || ''}
-                        onChange={(e) => setEditDayOff({...editDayOff, name: e.target.value})}
+                        value={editDayOff.name || ""}
+                        onChange={(e) =>
+                          setEditDayOff({ ...editDayOff, name: e.target.value })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Kunlar
@@ -1039,12 +1121,17 @@ const Workday = () => {
                           <button
                             key={day.value}
                             type="button"
-                            onClick={() => toggleDaySelection(day.value, editDayOff.days || [], (days) => 
-                              setEditDayOff({...editDayOff, days}))}
+                            onClick={() =>
+                              toggleDaySelection(
+                                day.value,
+                                editDayOff.days || [],
+                                (days) => setEditDayOff({ ...editDayOff, days })
+                              )
+                            }
                             className={`px-3 py-2 text-sm rounded-md transition ${
                               (editDayOff.days || []).includes(day.value)
-                                ? 'bg-purple-600 dark:bg-purple-700 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                ? "bg-purple-600 dark:bg-purple-700 text-white"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                             }`}
                           >
                             {day.label}
@@ -1055,20 +1142,24 @@ const Workday = () => {
                         Joriy kunlar: {getFullDayNames(showEditDayOff.days)}
                       </p>
                     </div>
-                    
+
                     {/* Superadmin: Change user */}
-                    {currentUser?.role === 'superadmin' && (
+                    {currentUser?.role === "superadmin" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Foydalanuvchi ID-si
                         </label>
                         <input
                           type="number"
-                          value={editDayOff.user || ''}
-                          onChange={(e) => setEditDayOff({
-                            ...editDayOff, 
-                            user: e.target.value ? parseInt(e.target.value) : undefined
-                          })}
+                          value={editDayOff.user || ""}
+                          onChange={(e) =>
+                            setEditDayOff({
+                              ...editDayOff,
+                              user: e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined,
+                            })
+                          }
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -1077,7 +1168,7 @@ const Workday = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-6 flex justify-between">
                     <button
                       onClick={() => handleDeleteDayOff(showEditDayOff.id)}
@@ -1085,7 +1176,7 @@ const Workday = () => {
                     >
                       O'chirish
                     </button>
-                    
+
                     <div className="flex gap-3">
                       <button
                         onClick={() => setShowEditDayOff(null)}
