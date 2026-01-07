@@ -622,15 +622,7 @@ export function DashboardPage() {
             />
             {isRefreshing ? "Sinxronizatsiya..." : "Sinxronizatsiyalash"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={testEmployeeHistoryAPI}
-            className="flex-1 sm:flex-none"
-            title="Employee History API ni test qilish"
-          >
-            <History className="mr-2 h-4 w-4" />
-            Test API
-          </Button>
+          
         </div>
       </div>
 

@@ -377,15 +377,10 @@ const Absence = () => {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-48"
+                  className="w-38"
                 />
                 
-                <Button
-                  onClick={loadAbsentEmployees}
-                  disabled={loading}
-                >
-                  {loading ? 'Yuklanmoqda...' : 'Yuklash'}
-                </Button>
+                
               </div>
             </div>
           </CardHeader>
@@ -405,7 +400,7 @@ const Absence = () => {
             ) : (
               <div className="space-y-4">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-900/10 border-red-200 dark:border-red-800">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -417,22 +412,6 @@ const Absence = () => {
                         </div>
                         <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30">
                           <Users className="h-6 w-6 text-red-600 dark:text-red-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800">
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">O'rtacha Jarima</p>
-                          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
-                            {formatPrice((absentData.employees.reduce((sum, emp) => sum + emp.fine, 0) / absentData.total).toFixed(2))}
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                          <DollarSign className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
                       </div>
                     </CardContent>
@@ -628,7 +607,7 @@ const Absence = () => {
 
           {/* Summary Cards */}
           {calculateTotals() && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-blue-200 dark:border-blue-800">
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
@@ -677,21 +656,6 @@ const Absence = () => {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/10 border-purple-200 dark:border-purple-800">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Sof Mavjud</p>
-                      <p className="text-2xl font-bold text-purple-900 dark:text-purple-100 mt-1">
-                        {formatPrice(calculateTotals()!.totalNetAdjustment.toString())}
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30">
-                      <DollarSign className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
 
@@ -708,11 +672,7 @@ const Absence = () => {
                     {getMonthLabel()} {selectedYear} - {filteredResults.length} ta hodim
                   </p>
                 </div>
-                {monthlyReport && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Oxirgi yangilangan: {new Date().toLocaleTimeString('uz-UZ')}
-                  </div>
-                )}
+                
               </div>
             </CardHeader>
             <CardContent>
