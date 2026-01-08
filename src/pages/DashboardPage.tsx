@@ -545,22 +545,41 @@ export function DashboardPage() {
     }
   };
 
-  // Format time display
-  const formatTime = (time: string | null) => {
-    if (!time) return <span className="text-gray-400">—</span>;
+  // Replace the existing formatTime function with this:
+const formatTime = (time: string | null) => {
+  if (!time) return <span className="text-gray-400">—</span>;
+  
+  try {
+    // Check if it's an ISO string (contains T or is a date string)
+    if (time.includes('T') || time.includes('-')) {
+      // It's an ISO date string
+      const date = new Date(time);
+      const hours = date.getHours().toString();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return <span className="font-medium">{`${hours}:${minutes}`}</span>;
+    } else {
+      // It's already a time string, try to extract hours and minutes
+      // Handle various time formats
+      const timeStr = time.trim();
+      
+      // Match HH:MM pattern (e.g., "08:30", "14:25:00")
+      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = match[2];
+        // Remove leading zero if present (e.g., "08" becomes "8")
+        const formattedHours = hours.toString();
+        return <span className="font-medium">{`${formattedHours}:${minutes}`}</span>;
+      }
+      
+      // Fallback: return the original time
+      return <span className="font-medium">{time}</span>;
+    }
+  } catch (error) {
+    console.error('Error formatting time:', error, time);
     return <span className="font-medium">{time}</span>;
-  };
-
-  // Format date for display
-  const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("uz-UZ", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  }
+};
 
   // Format time for history table
   const formatHistoryTimeDisplay = (isoString: string) => {
@@ -873,7 +892,7 @@ export function DashboardPage() {
                         <p className="text-gray-500 flex items-center gap-2 mt-1">
                           <User className="h-4 w-4" />
                           {selectedEmployeeName} • {selectedEmployeeNo} •{" "}
-                          {formatDisplayDate(selectedDate)}
+                          {(selectedDate)}
                         </p>
                       </div>
                     </div>

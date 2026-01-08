@@ -31,6 +31,7 @@ import {
   SquareChartGantt,
   Bell,
   UserRoundX,
+  BarChart3,
 } from 'lucide-react';
 import { apiService } from '../lib/api';
 // Import qilish
@@ -63,7 +64,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Tanaffus', href: '/break', icon: Timer },
     { name: 'Ish kunlari', href: '/workday', icon: CalendarDays },
     { name: 'Tariflar', href: '/plans', icon: SquareChartGantt },
-    { name: 'Kelmaganlar', href: '/absence', icon: UserRoundX },
+    { name: 'Umumiy Hisobot', href: '/absence', icon: BarChart3 },
     { name: 'Profil', href: '/profile', icon: User },
   ];
 
