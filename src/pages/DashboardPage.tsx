@@ -452,9 +452,10 @@ export function DashboardPage() {
 
   // Filter employees based on status
   const getFilteredEmployees = () => {
-    if (!attendance) return [];
+  if (!attendance) return [];
 
-    return attendance.employees.filter((emp) => {
+  return attendance.employees
+    .filter((emp) => {
       const matchesSearch =
         emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
@@ -470,8 +471,11 @@ export function DashboardPage() {
       })();
 
       return matchesSearch && matchesStatus;
-    });
-  };
+    })
+    // ✅ SORT A → Z by name
+    .sort((a, b) => a.name.localeCompare(b.name, "uz", { sensitivity: "base" }));
+};
+
 
   const filteredEmployees = getFilteredEmployees();
 

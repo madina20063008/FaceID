@@ -150,15 +150,24 @@ export function EmployeesPage() {
     }
   };
 
-  // Filter employees locally for search
   const filteredEmployees = Array.isArray(employees)
-    ? employees.filter(
+  ? employees
+      .filter(
         (emp) =>
           emp?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          emp?.employee_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          emp?.employee_no
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           emp?.position?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : [];
+      // ✅ SORT A → Z by name
+      .sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", "uz", {
+          sensitivity: "base",
+        })
+      )
+  : [];
+
 
   // Fetch all employees
   const fetchEmployees = async () => {
