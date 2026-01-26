@@ -213,20 +213,7 @@ export function LoginPage() {
         </CardHeader>
 
         <CardContent>
-          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
-            <div className="flex items-start gap-2">
-              <Info className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-green-800 dark:text-green-300">
-                  Muhim:
-                </p>
-                <p className="text-green-700 dark:text-green-400 mt-1">
-                  Server telefon raqamni <strong>998 prefiksi bilan</strong>{" "}
-                  kutmoqda. Misol: <strong>+998 77 777 77 77</strong>
-                </p>
-              </div>
-            </div>
-          </div>
+          
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 rounded-md flex items-center gap-2">
@@ -290,46 +277,7 @@ export function LoginPage() {
               )}
             </Button>
 
-            <div className="flex flex-wrap gap-2 justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleTest}
-                disabled={
-                  isSubmitting || !phoneNumber.trim() || !password.trim()
-                }
-                className="text-xs"
-              >
-                <TestTube className="h-3 w-3 mr-1" />
-                Test API
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSuperAdminTest}
-                disabled={isSubmitting}
-                className="text-xs bg-yellow-50 dark:bg-yellow-900/20"
-              >
-                <Bug className="h-3 w-3 mr-1" />
-                Test SuperAdmin
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleManualTest}
-                disabled={
-                  isSubmitting || !phoneNumber.trim() || !password.trim()
-                }
-                className="text-xs"
-              >
-                Manual Test
-              </Button>
-            </div>
+            
 
             {testResult && (
               <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
@@ -349,7 +297,7 @@ export function LoginPage() {
             <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
               <p className="mb-1">Hisobingiz yo'qmi?</p>
               <a
-                href="https://t.me/timepayadmin"
+                href="https://t.me/ATS_systems_admin"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
