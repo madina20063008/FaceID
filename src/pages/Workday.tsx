@@ -640,7 +640,7 @@ const Workday = () => {
 
           {/* Add WorkDay Modal */}
           {showAddWorkDay && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -740,7 +740,7 @@ const Workday = () => {
 
           {/* Edit WorkDay Modal */}
           {showEditWorkDay && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -990,7 +990,7 @@ const Workday = () => {
 
           {/* Add DayOff Modal */}
           {showAddDayOff && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -1090,7 +1090,7 @@ const Workday = () => {
 
           {/* Edit DayOff Modal */}
           {showEditDayOff && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">

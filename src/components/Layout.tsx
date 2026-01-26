@@ -1,9 +1,9 @@
-import { ReactNode, useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from 'next-themes';
-import { Button } from '../app/components/ui/button';
-import { Avatar, AvatarFallback } from '../app/components/ui/avatar';
+import { ReactNode, useState, useEffect, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "next-themes";
+import { Button } from "../app/components/ui/button";
+import { Avatar, AvatarFallback } from "../app/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../app/components/ui/dropdown-menu';
+} from "../app/components/ui/dropdown-menu";
 import {
   LayoutDashboard,
   Users,
@@ -32,10 +32,10 @@ import {
   Bell,
   UserRoundX,
   BarChart3,
-} from 'lucide-react';
-import { apiService } from '../lib/api';
+} from "lucide-react";
+import { apiService } from "../lib/api";
 // Import qilish
-import { Notification } from '../lib/types';
+import { Notification } from "../lib/types";
 
 interface LayoutProps {
   children: ReactNode;
@@ -55,17 +55,17 @@ export function Layout({ children }: LayoutProps) {
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const navigation = [
-    { name: 'Bosh sahifa', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Hodimlar', href: '/employees', icon: Users },
-    { name: 'Qurilmalar', href: '/devices', icon: ScanFace },
-    { name: 'Smenalar', href: '/shifts', icon: Shuffle },
-    { name: 'Telegram', href: '/telegram', icon: MessageCircleMore },
-    { name: 'Filial', href: '/filial', icon: Landmark },
-    { name: 'Tanaffus', href: '/break', icon: Timer },
-    { name: 'Ish kunlari', href: '/workday', icon: CalendarDays },
-    { name: 'Tariflar', href: '/plans', icon: SquareChartGantt },
-    { name: 'Umumiy Hisobot', href: '/absence', icon: BarChart3 },
-    { name: 'Profil', href: '/profile', icon: User },
+    { name: "Bosh sahifa", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Hodimlar", href: "/employees", icon: Users },
+    { name: "Qurilmalar", href: "/devices", icon: ScanFace },
+    { name: "Smenalar", href: "/shifts", icon: Shuffle },
+    { name: "Telegram", href: "/telegram", icon: MessageCircleMore },
+    { name: "Filial", href: "/filial", icon: Landmark },
+    { name: "Tanaffus", href: "/break", icon: Timer },
+    { name: "Ish kunlari", href: "/workday", icon: CalendarDays },
+    { name: "Tariflar", href: "/plans", icon: SquareChartGantt },
+    { name: "Umumiy Hisobot", href: "/absence", icon: BarChart3 },
+    { name: "Profil", href: "/profile", icon: User },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -78,37 +78,40 @@ export function Layout({ children }: LayoutProps) {
   // Close notification dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
         setNotificationOpen(false);
       }
     };
 
     if (notificationOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [notificationOpen]);
 
   const loadNotifications = async () => {
     try {
       const response = await apiService.getNotifications();
-      
+
       // Response'ni qayta ishlash
       const notificationsData = (response as any).map((item: any) => ({
         id: item.id,
         user: item.user,
         text: item.text,
         created_at: item.created_at,
-        is_read: item.is_read || false
+        is_read: item.is_read || false,
       })) as AppNotification[];
-      
-      console.log('📥 Loaded notifications:', notificationsData);
+
+      console.log("📥 Loaded notifications:", notificationsData);
       setNotifications(notificationsData);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error("Failed to load notifications:", error);
       // Mock data for testing
       const mockData: AppNotification[] = [
         {
@@ -116,8 +119,8 @@ export function Layout({ children }: LayoutProps) {
           user: 123,
           text: "Test xabarnoma",
           created_at: new Date().toISOString(),
-          is_read: false
-        }
+          is_read: false,
+        },
       ];
       setNotifications(mockData);
     }
@@ -126,11 +129,11 @@ export function Layout({ children }: LayoutProps) {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('uz-UZ', {
-        hour: '2-digit',
-        minute: '2-digit',
-        day: '2-digit',
-        month: 'short',
+      return date.toLocaleDateString("uz-UZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "short",
       });
     } catch (error) {
       return dateString;
@@ -150,7 +153,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
         <div className="flex flex-col h-full">
@@ -161,7 +164,9 @@ export function Layout({ children }: LayoutProps) {
             </div>
             <div>
               <h1 className="font-bold text-lg">TimePay</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">CRM System</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                CRM System
+              </p>
             </div>
           </div>
 
@@ -176,8 +181,8 @@ export function Layout({ children }: LayoutProps) {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     isActive(item.href)
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -192,13 +197,23 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-3 text-sm">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-blue-600 text-white">
-                  {user?.full_name?.charAt(0) || 'U'}
+                  {user?.full_name?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{user?.full_name || 'Foydalanuvchi'}</p>
+                <p className="font-medium truncate">
+                  {user?.full_name || "Foydalanuvchi"}
+                </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {user?.role || 'Admin'}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {
+                      user?.role === "s"
+                        ? "Superadmin"
+                        : user?.role === "a"
+                          ? "Admin"
+                          : "Admin" // default
+                    }
+                  </p>
                 </p>
               </div>
             </div>
@@ -217,7 +232,11 @@ export function Layout({ children }: LayoutProps) {
               className="lg:hidden"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {sidebarOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </Button>
 
             <div className="flex-1" />
@@ -225,12 +244,15 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-2">
               {/* Custom Notification Dropdown */}
               <div className="relative" ref={notificationRef}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="relative"
                   onClick={() => {
-                    console.log('Bell clicked, current state:', notificationOpen);
+                    console.log(
+                      "Bell clicked, current state:",
+                      notificationOpen,
+                    );
                     setNotificationOpen(!notificationOpen);
                   }}
                 >
@@ -241,7 +263,7 @@ export function Layout({ children }: LayoutProps) {
                     </span>
                   )}
                 </Button>
-                
+
                 {/* Dropdown panel - Responsive for mobile */}
                 {notificationOpen && (
                   <div className="fixed inset-0 lg:absolute lg:inset-auto lg:right-0 lg:mt-2 lg:w-96 w-full lg:max-h-[80vh] h-[25vh] lg:h-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 lg:rounded-lg shadow-lg z-50 overflow-y-auto">
@@ -259,7 +281,7 @@ export function Layout({ children }: LayoutProps) {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     {/* Main content */}
                     <div className="lg:p-0">
                       <div className="hidden lg:flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -285,7 +307,7 @@ export function Layout({ children }: LayoutProps) {
                           </Button>
                         </div>
                       </div>
-                      
+
                       {notifications.length === 0 ? (
                         <div className="px-4 py-8 lg:py-16 text-center text-gray-500">
                           <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -308,7 +330,10 @@ export function Layout({ children }: LayoutProps) {
                               key={notification.id}
                               className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer active:bg-gray-100 dark:active:bg-gray-600"
                               onClick={() => {
-                                console.log('Clicked notification:', notification);
+                                console.log(
+                                  "Clicked notification:",
+                                  notification,
+                                );
                                 // Handle notification click
                                 // On mobile, you might want to close after clicking
                                 if (window.innerWidth < 1024) {
@@ -323,7 +348,7 @@ export function Layout({ children }: LayoutProps) {
                                 <p className="text-xs text-gray-500">
                                   {formatDate(notification.created_at)}
                                 </p>
-                                {user?.role === 'superadmin' && (
+                                {user?.role === "superadmin" && (
                                   <span className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
                                     ID: {notification.user}
                                   </span>
@@ -334,7 +359,7 @@ export function Layout({ children }: LayoutProps) {
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Mobile footer with close button */}
                     <div className="lg:hidden p-4 border-t border-gray-200 dark:border-gray-700">
                       <Button
@@ -351,7 +376,7 @@ export function Layout({ children }: LayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               >
                 <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                 <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -359,10 +384,13 @@ export function Layout({ children }: LayoutProps) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full"
+                  >
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="bg-blue-600 text-white">
-                        {user?.full_name?.charAt(0) || 'U'}
+                        {user?.full_name?.charAt(0) || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -377,7 +405,10 @@ export function Layout({ children }: LayoutProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600">
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="cursor-pointer text-red-600"
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Chiqish
                   </DropdownMenuItem>

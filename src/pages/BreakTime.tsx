@@ -449,7 +449,7 @@ const getBreakTimeName = (startTime: string, endTime: string) => {
 
       {/* Add Break Time Modal */}
       {showAddBreakTime && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -585,7 +585,7 @@ const getBreakTimeName = (startTime: string, endTime: string) => {
 
       {/* Edit Break Time Modal */}
       {showEditBreakTime && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">

@@ -789,10 +789,7 @@ export function DashboardPage() {
                             </span>
                             <div className="flex gap-2 text-xs text-gray-500">
                               <span>ID: {employee.employee_id}</span>{" "}
-                              {/* Changed from employee.id */}
-                              {employee.employee_no && (
-                                <span>Raqam: {employee.employee_no}</span>
-                              )}
+                              
                             </div>
                           </div>
                         </div>
