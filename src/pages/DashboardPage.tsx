@@ -239,7 +239,7 @@ export function DashboardPage() {
 
     try {
       const response = await fetch(
-        `http://185.191.141.213/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
+        `https://hikvision.ugku.uz/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
         {
           headers: {
             Authorization: `Bearer ${apiService.getAccessToken()}`,

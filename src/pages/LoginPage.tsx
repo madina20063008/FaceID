@@ -121,7 +121,7 @@ export function LoginPage() {
 
       console.log("🧪 Manual test - Sending WITH 998 prefix:", phoneWith998);
 
-      const response = await fetch("http://185.191.141.213/user/login/", {
+      const response = await fetch("https://hikvision.ugku.uz/user/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
