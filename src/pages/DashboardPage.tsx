@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  apiService,
-  formatDate,
-} from "../lib/api";
-import {
-  DailyAttendance,
-  EmployeeHistory,
-} from "../lib/types";
+import { apiService, formatDate } from "../lib/api";
+import { DailyAttendance, EmployeeHistory } from "../lib/types";
 import {
   Card,
   CardContent,
@@ -93,7 +87,7 @@ export function DashboardPage() {
   // Employee History States
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
-    null
+    null,
   );
   const [selectedEmployeeName, setSelectedEmployeeName] = useState<string>("");
   const [selectedEmployeeNo, setSelectedEmployeeNo] = useState<string>("");
@@ -114,7 +108,7 @@ export function DashboardPage() {
           name: emp.name,
           hasId: !!emp.id,
           hasEmployeeNo: !!emp.employee_no,
-        }))
+        })),
       );
     }
   }, [attendance]);
@@ -142,12 +136,12 @@ export function DashboardPage() {
         }
 
         toast.success(
-          `Davomat ma'lumotlari yuklandi: ${attendanceData.stats.came} ta kelgan`
+          `Davomat ma'lumotlari yuklandi: ${attendanceData.stats.came} ta kelgan`,
         );
       } catch (apiError) {
         console.error("API error:", apiError);
         toast.warning(
-          "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda."
+          "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda.",
         );
       }
     } catch (error) {
@@ -188,20 +182,20 @@ export function DashboardPage() {
       setShowHistoryModal(true);
 
       console.log(
-        `📅 Loading history for employee ID ${employeeId} on ${selectedDate}`
+        `📅 Loading history for employee ID ${employeeId} on ${selectedDate}`,
       );
 
       // Call the API with employee.employee_id (e.g., 9)
       const history = await apiService.getEmployeeHistory(
         selectedDate,
-        employeeId
+        employeeId,
       );
       console.log("📊 Employee history API response:", history);
 
       setEmployeeHistory(history);
 
       toast.success(
-        `${employee.name}ning kunlik tarixi yuklandi: ${history.length} ta tadbir`
+        `${employee.name}ning kunlik tarixi yuklandi: ${history.length} ta tadbir`,
       );
     } catch (error: any) {
       console.error("❌ Failed to load employee history:", error);
@@ -245,14 +239,14 @@ export function DashboardPage() {
 
     try {
       const response = await fetch(
-        `https://45.55.129.34/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
+        `http://185.191.141.213/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
         {
           headers: {
             Authorization: `Bearer ${apiService.getAccessToken()}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-        }
+        },
       );
 
       console.log("🔧 Raw API response status:", response.status);
@@ -263,7 +257,7 @@ export function DashboardPage() {
         const data = JSON.parse(text);
         console.log("✅ API test successful:", data);
         toast.success(
-          `${testEmployeeName} uchun ${data.length} ta tadbir topildi`
+          `${testEmployeeName} uchun ${data.length} ta tadbir topildi`,
         );
       } else {
         console.error("❌ API error:", response.status, text);
@@ -321,7 +315,7 @@ export function DashboardPage() {
     // Sort by time first
     const sortedHistory = [...history].sort(
       (a, b) =>
-        new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
+        new Date(a.event_time).getTime() - new Date(b.event_time).getTime(),
     );
 
     sortedHistory.forEach((record) => {
@@ -352,7 +346,7 @@ export function DashboardPage() {
     if (kirishEvents.length > 0) {
       const earliestKirish = kirishEvents.sort(
         (a, b) =>
-          new Date(a.event_time).getTime() - new Date(b.event_time).getTime()
+          new Date(a.event_time).getTime() - new Date(b.event_time).getTime(),
       )[0];
       kirish = formatTimeFromISO(earliestKirish.event_time);
     }
@@ -361,7 +355,7 @@ export function DashboardPage() {
     if (chiqishEvents.length > 0) {
       const latestChiqish = chiqishEvents.sort(
         (a, b) =>
-          new Date(b.event_time).getTime() - new Date(a.event_time).getTime()
+          new Date(b.event_time).getTime() - new Date(a.event_time).getTime(),
       )[0];
       chiqish = formatTimeFromISO(latestChiqish.event_time);
     }
@@ -406,7 +400,7 @@ export function DashboardPage() {
             toast.success(successMessage);
           } else {
             toast.warning(
-              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas"
+              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
             );
           }
 
@@ -421,7 +415,7 @@ export function DashboardPage() {
           try {
             await loadAttendance(selectedDate);
             toast.warning(
-              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi"
+              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi",
             );
           } catch (fetchError) {
             toast.error("Ikkala operatsiya ham amalga oshirilmadi");
@@ -546,40 +540,42 @@ export function DashboardPage() {
   };
 
   // Replace the existing formatTime function with this:
-const formatTime = (time: string | null) => {
-  if (!time) return <span className="text-gray-400">—</span>;
-  
-  try {
-    // Check if it's an ISO string (contains T or is a date string)
-    if (time.includes('T') || time.includes('-')) {
-      // It's an ISO date string
-      const date = new Date(time);
-      const hours = date.getHours().toString();
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      return <span className="font-medium">{`${hours}:${minutes}`}</span>;
-    } else {
-      // It's already a time string, try to extract hours and minutes
-      // Handle various time formats
-      const timeStr = time.trim();
-      
-      // Match HH:MM pattern (e.g., "08:30", "14:25:00")
-      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
-      if (match) {
-        let hours = parseInt(match[1]);
-        const minutes = match[2];
-        // Remove leading zero if present (e.g., "08" becomes "8")
-        const formattedHours = hours.toString();
-        return <span className="font-medium">{`${formattedHours}:${minutes}`}</span>;
+  const formatTime = (time: string | null) => {
+    if (!time) return <span className="text-gray-400">—</span>;
+
+    try {
+      // Check if it's an ISO string (contains T or is a date string)
+      if (time.includes("T") || time.includes("-")) {
+        // It's an ISO date string
+        const date = new Date(time);
+        const hours = date.getHours().toString();
+        const minutes = date.getMinutes().toString().padStart(2, "0");
+        return <span className="font-medium">{`${hours}:${minutes}`}</span>;
+      } else {
+        // It's already a time string, try to extract hours and minutes
+        // Handle various time formats
+        const timeStr = time.trim();
+
+        // Match HH:MM pattern (e.g., "08:30", "14:25:00")
+        const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+        if (match) {
+          let hours = parseInt(match[1]);
+          const minutes = match[2];
+          // Remove leading zero if present (e.g., "08" becomes "8")
+          const formattedHours = hours.toString();
+          return (
+            <span className="font-medium">{`${formattedHours}:${minutes}`}</span>
+          );
+        }
+
+        // Fallback: return the original time
+        return <span className="font-medium">{time}</span>;
       }
-      
-      // Fallback: return the original time
+    } catch (error) {
+      console.error("Error formatting time:", error, time);
       return <span className="font-medium">{time}</span>;
     }
-  } catch (error) {
-    console.error('Error formatting time:', error, time);
-    return <span className="font-medium">{time}</span>;
-  }
-};
+  };
 
   // Format time for history table
   const formatHistoryTimeDisplay = (isoString: string) => {
@@ -641,7 +637,6 @@ const formatTime = (time: string | null) => {
             />
             {isRefreshing ? "Sinxronizatsiya..." : "Sinxronizatsiyalash"}
           </Button>
-          
         </div>
       </div>
 
@@ -892,7 +887,7 @@ const formatTime = (time: string | null) => {
                         <p className="text-gray-500 flex items-center gap-2 mt-1">
                           <User className="h-4 w-4" />
                           {selectedEmployeeName} • {selectedEmployeeNo} •{" "}
-                          {(selectedDate)}
+                          {selectedDate}
                         </p>
                       </div>
                     </div>
@@ -1041,12 +1036,12 @@ const formatTime = (time: string | null) => {
                                     </TableCell>
                                     <TableCell>
                                       {formatHistoryTimeDisplay(
-                                        record.event_time
+                                        record.event_time,
                                       )}
                                     </TableCell>
                                     <TableCell>
                                       {new Date(
-                                        record.event_time
+                                        record.event_time,
                                       ).toLocaleDateString("uz-UZ")}
                                     </TableCell>
                                     <TableCell>
@@ -1057,10 +1052,10 @@ const formatTime = (time: string | null) => {
                                             .includes("kirish")
                                             ? "default"
                                             : record.label_name
-                                                .toLowerCase()
-                                                .includes("chiqish")
-                                            ? "destructive"
-                                            : "secondary"
+                                                  .toLowerCase()
+                                                  .includes("chiqish")
+                                              ? "destructive"
+                                              : "secondary"
                                         }
                                       >
                                         {record.label_name
@@ -1068,10 +1063,10 @@ const formatTime = (time: string | null) => {
                                           .includes("kirish")
                                           ? "Kirish"
                                           : record.label_name
-                                              .toLowerCase()
-                                              .includes("chiqish")
-                                          ? "Chiqish"
-                                          : "Boshqa"}
+                                                .toLowerCase()
+                                                .includes("chiqish")
+                                            ? "Chiqish"
+                                            : "Boshqa"}
                                       </Badge>
                                     </TableCell>
                                   </TableRow>
@@ -1080,13 +1075,9 @@ const formatTime = (time: string | null) => {
                             </Table>
                           </div>
                         )}
-
-                        
                       </div>
                     )}
                   </div>
-
-                 
                 </div>
               </div>
             </motion.div>
