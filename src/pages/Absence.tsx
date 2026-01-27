@@ -54,6 +54,7 @@ import {
   User,
   Pencil,
   Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -79,7 +80,10 @@ const Absence = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [newComment, setNewComment] = useState<string>('');
   
-  // Months data - FIX: Use string values for Select
+  // Excel download state
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
+  
+  // Months data
   const months = [
     { value: '1', label: 'Yanvar' },
     { value: '2', label: 'Fevral' },
@@ -95,7 +99,7 @@ const Absence = () => {
     { value: '12', label: 'Dekabr' },
   ];
 
-  // Generate last 5 years - FIX: Use string values
+  // Generate last 5 years
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
@@ -103,7 +107,6 @@ const Absence = () => {
   const statusOptions = [
     { value: 'sbk', label: 'Sababli kelmadi' },
     { value: 'szk', label: 'Sababsiz kelmadi' },
-    
   ];
 
   // Load absent employees for selected date
@@ -166,6 +169,119 @@ const Absence = () => {
     }
   };
 
+  // Kunlik Excel hisobotini yuklash funksiyasi
+  const handleDownloadDailyExcel = async () => {
+    try {
+      setDownloadingExcel(true);
+      toast.info('Excel hisoboti yuklanmoqda...');
+      
+      // Get current date for download
+      const downloadDate = selectedDate;
+      
+      console.log('Excel hisoboti uchun sana:', downloadDate);
+      
+      try {
+        // Excel faylni serverdan olish
+        const blob = await apiService.getDailyExcelReport(downloadDate);
+        
+        // Faylni yuklash
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Fayl nomini yaratish
+        const dateObj = new Date(downloadDate);
+        const formattedDate = dateObj.toLocaleDateString('uz-UZ', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).replace(/\./g, '-');
+        
+        const fileName = `Kunlik_hisobot_${formattedDate}.xlsx`;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        
+        // URL ni tozalash
+        window.URL.revokeObjectURL(url);
+        
+        toast.success(`Excel fayl "${fileName}" muvaffaqiyatli yuklandi!`);
+      } catch (apiError: any) {
+        console.error('API orqali Excel yuklashda xatolik:', apiError);
+        
+        // Agar API xato bersa, foydalanuvchiga xabar berish
+        let errorMessage = 'Excel faylni yuklashda xatolik';
+        
+        if (apiError.message?.includes('404')) {
+          errorMessage = `"${downloadDate}" sanasi uchun hisobot topilmadi`;
+        } else if (apiError.message?.includes('400')) {
+          errorMessage = 'Noto\'g\'ri sana formati. YYYY-MM-DD formatida kiriting';
+        } else if (apiError.message?.includes('ruxsat yo\'q')) {
+          errorMessage = 'Excel hisobotini olish uchun ruxsat yo\'q';
+        }
+        
+        toast.error(errorMessage);
+        
+        // Alternative: Faylni yaratish
+        createFallbackExcel();
+      }
+    } catch (err: any) {
+      console.error('Excel yuklashda umumiy xatolik:', err);
+      toast.error('Excel faylni yuklashda xatolik yuz berdi');
+    } finally {
+      setDownloadingExcel(false);
+    }
+  };
+
+  // Alternative fallback Excel yaratish
+  const createFallbackExcel = () => {
+    // Agar serverdan Excel olinmasa, client tomonida ma'lumotlarni yaratish
+    if (absentData) {
+      // Ma'lumotlarni CSV formatga o'tkazish
+      const csvData = [];
+      
+      // CSV sarlavhalari
+      csvData.push(['Hodim ID', 'Hodim nomi', 'Holat', 'Izoh', 'Jarima', 'Sana']);
+      
+      // Ma'lumotlar qatorlari
+      absentData.employees.forEach(emp => {
+        csvData.push([
+          emp.employee_id,
+          emp.employee_name,
+          emp.status_label,
+          emp.comment || '',
+          emp.fine,
+          emp.date
+        ]);
+      });
+      
+      // CSV matnini yaratish
+      const csvContent = csvData.map(row => 
+        row.map(cell => `"${cell}"`).join(',')
+      ).join('\n');
+      
+      // CSV faylni yuklash
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const fileName = `Kunlik_hisobot_${selectedDate}.csv`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      // URL ni tozalash
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`CSV fayl "${fileName}" muvaffaqiyatli yaratildi!`);
+    } else {
+      toast.error('Yuklash uchun ma\'lumotlar mavjud emas');
+    }
+  };
+
   const handleStatusUpdate = async () => {
     if (!selectedAbsent) return;
     
@@ -214,7 +330,7 @@ const Absence = () => {
     switch (status) {
       case 'sbk': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
       case 'szk': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-     
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700/50 dark:text-gray-400';
     }
   };
 
@@ -222,12 +338,8 @@ const Absence = () => {
     switch (status) {
       case 'sbk': return <AlertCircle className="h-4 w-4 mr-1" />;
       case 'szk': return <XCircle className="h-4 w-4 mr-1" />;
-      
+      default: return null;
     }
-  };
-
-  const handleExportToExcel = () => {
-    toast.info('Excel formatga eksport qilish funksiyasi tez orada qoʻshiladi');
   };
 
   const toggleEmployeeDetails = (employeeId: number) => {
@@ -290,19 +402,26 @@ const Absence = () => {
         </div>
         
         <div className="flex gap-2">
-          {monthlyReport && (
+          {/* Kunlik Excel tugmasi faqat kunlik hisobot sahifasida */}
+          {!monthlyReport && (
             <Button
               variant="outline"
-              onClick={handleExportToExcel}
+              onClick={handleDownloadDailyExcel}
+              disabled={downloadingExcel || !absentData || absentData.employees.length === 0}
               className="gap-2"
             >
-              <Download className="h-4 w-4" />
-              Excelga yuklash
+              {downloadingExcel ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4" />
+              )}
+              {downloadingExcel ? 'Yuklanmoqda...' : 'Excelga yuklash'}
             </Button>
           )}
+          
           <Button
             onClick={monthlyReport ? loadMonthlyReport : loadAbsentEmployees}
-            disabled={loading}
+            disabled={loading || downloadingExcel}
             className="gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -313,7 +432,7 @@ const Absence = () => {
 
       {/* Error message */}
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
             <span>{error}</span>
@@ -379,8 +498,6 @@ const Absence = () => {
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-38"
                 />
-                
-                
               </div>
             </div>
           </CardHeader>
@@ -563,7 +680,7 @@ const Absence = () => {
                   </Select>
                 </div>
 
-                {/* Employee Filter - FIX: Don't use empty string value */}
+                {/* Employee Filter */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -577,7 +694,6 @@ const Absence = () => {
                       <SelectValue placeholder="Hamma hodimlar" />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Use "all" instead of empty string */}
                       <SelectItem value="all">Hamma hodimlar</SelectItem>
                       {employees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id.toString()}>
@@ -655,7 +771,6 @@ const Absence = () => {
                   </div>
                 </CardContent>
               </Card>
-
             </div>
           )}
 
@@ -673,6 +788,12 @@ const Absence = () => {
                   </p>
                 </div>
                 
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    Oylik Excel funksiyasi hozirda mavjud emas
+                  </span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>

@@ -723,11 +723,7 @@ export function EmployeesPage() {
                             <span className="font-medium block">
                               {employee.name || "Noma'lum"}
                             </span>
-                            {employee.id && (
-                              <span className="text-xs text-gray-500">
-                                ID: {employee.id}
-                              </span>
-                            )}
+                            
                           </div>
                         </div>
                       </TableCell>

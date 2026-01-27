@@ -10,9 +10,10 @@ import {
   BreakTime,
   User,
 } from "../lib/types";
+
 const ShiftPage = () => {
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [breakTimes, setBreakTimes] = useState<BreakTime[]>([]); // Add break times state
+  const [breakTimes, setBreakTimes] = useState<BreakTime[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -25,6 +26,7 @@ const ShiftPage = () => {
     end_time: "18:00:00",
     break_time: undefined,
     user: undefined,
+    approved_late_min: 0,
   });
   const [editShift, setEditShift] = useState<UpdateShiftRequest>({
     name: "",
@@ -32,12 +34,13 @@ const ShiftPage = () => {
     end_time: "",
     break_time: undefined,
     user: undefined,
+    approved_late_min: undefined,
   });
 
   // Smenalarni yuklash
   useEffect(() => {
     loadCurrentUserAndShifts();
-    loadBreakTimes(); // Load break times
+    loadBreakTimes();
   }, []);
 
   const loadCurrentUserAndShifts = async (userId?: number) => {
@@ -49,18 +52,21 @@ const ShiftPage = () => {
       const user = await apiService.getCurrentUser();
       setCurrentUser(user);
 
-      // Agar userId berilgan bo'lsa, o'sha userId bilan, aks holda undefined
+      // DEBUG: Tekshirish
+      console.log("Loading shifts for userId:", userId || "current user");
+      
       const shiftsData = await apiService.getShifts(userId);
+      
+      // DEBUG: API dan qaytgan ma'lumot
+      console.log("API dan qaytgan shiftsData:", shiftsData);
+      if (shiftsData.length > 0) {
+        console.log("Birinchi smenaning approved_late_min:", shiftsData[0].approved_late_min);
+      }
+      
       setShifts(shiftsData);
     } catch (err: any) {
       console.error("Smenalarni yuklashda xatolik:", err);
-
-      // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
-        setError(`Xatolik: ${err.data.user_id}`);
-      } else {
-        setError(err.message || "Smenalarni yuklashda xatolik");
-      }
+      setError(err.message || "Smenalarni yuklashda xatolik");
     } finally {
       setLoading(false);
     }
@@ -101,7 +107,11 @@ const ShiftPage = () => {
       name: newShift.name,
       start_time: formatTimeForServer(newShift.start_time),
       end_time: formatTimeForServer(newShift.end_time),
+      approved_late_min: newShift.approved_late_min || 0,
     };
+
+    // DEBUG: Serverga yuborilayotgan ma'lumot
+    console.log("Serverga yuborilayotgan ma'lumot:", formattedData);
 
     // Add break_time if selected
     if (newShift.break_time !== undefined) {
@@ -114,7 +124,11 @@ const ShiftPage = () => {
     }
 
     try {
-      await apiService.createShift(formattedData);
+      const createdShift = await apiService.createShift(formattedData);
+      
+      // DEBUG: Serverdan qaytgan javob
+      console.log("Serverdan qaytgan javob:", createdShift);
+      console.log("Yaratilgan smenaning approved_late_min:", createdShift.approved_late_min);
 
       // Smenalarni qayta yuklash
       await loadCurrentUserAndShifts();
@@ -125,20 +139,11 @@ const ShiftPage = () => {
         end_time: "18:00:00",
         break_time: undefined,
         user: undefined,
+        approved_late_min: 0,
       });
     } catch (err: any) {
       console.error("Smena qo'shish xatosi:", err);
-
-      // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
-        setError(`Xatolik: ${err.data.user_id}`);
-      } else if (err.status === 400 && err.data?.detail) {
-        setError(`Xatolik: ${err.data.detail}`);
-      } else if (err.message) {
-        setError(`Xatolik: ${err.message}`);
-      } else {
-        setError("Smena qo'shishda xatolik");
-      }
+      setError(err.message || "Smena qo'shishda xatolik");
     }
   };
 
@@ -147,6 +152,11 @@ const ShiftPage = () => {
 
     try {
       const updateData: UpdateShiftRequest = {};
+      
+      // DEBUG: Edit holati
+      console.log("showEditShift:", showEditShift);
+      console.log("editShift:", editShift);
+      console.log("approved_late_min qiymati:", editShift.approved_late_min);
 
       // Faqat o'zgartirilgan maydonlarni yuborish
       if (editShift.name && editShift.name !== showEditShift.name) {
@@ -175,6 +185,12 @@ const ShiftPage = () => {
         updateData.break_time = editShift.break_time;
       }
 
+      // Add approved_late_min update - MUXIM!
+      // Null yoki 0 bo'lishi mumkin, shuning uchun to'g'ri tekshirish kerak
+      if (editShift.approved_late_min !== undefined) {
+        updateData.approved_late_min = editShift.approved_late_min;
+      }
+
       // Agar foydalanuvchi superadmin bo'lsa
       if (currentUser?.role === "superadmin" && editShift.user !== undefined) {
         updateData.user = editShift.user;
@@ -186,7 +202,14 @@ const ShiftPage = () => {
         return;
       }
 
-      await apiService.updateShift(showEditShift.id, updateData);
+      // DEBUG: Serverga yuborilayotgan yangilash ma'lumotlari
+      console.log("Serverga yuborilayotgan updateData:", updateData);
+
+      const updatedShift = await apiService.updateShift(showEditShift.id, updateData);
+      
+      // DEBUG: Yangilangan smena ma'lumotlari
+      console.log("Yangilangan smena:", updatedShift);
+      console.log("Yangilangan approved_late_min:", updatedShift.approved_late_min);
 
       // Smenalarni qayta yuklash
       await loadCurrentUserAndShifts();
@@ -197,20 +220,11 @@ const ShiftPage = () => {
         end_time: "",
         break_time: undefined,
         user: undefined,
+        approved_late_min: undefined,
       });
     } catch (err: any) {
       console.error("Smenani yangilash xatosi:", err);
-
-      // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
-        setError(`Xatolik: ${err.data.user_id}`);
-      } else if (err.status === 400 && err.data?.detail) {
-        setError(`Xatolik: ${err.data.detail}`);
-      } else if (err.message) {
-        setError(`Xatolik: ${err.message}`);
-      } else {
-        setError("Smenani yangilashda xatolik");
-      }
+      setError(err.message || "Smenani yangilashda xatolik");
     }
   };
 
@@ -221,19 +235,10 @@ const ShiftPage = () => {
 
     try {
       await apiService.deleteShift(id);
-      // Smenalarni qayta yuklash
       await loadCurrentUserAndShifts();
     } catch (err: any) {
       console.error("Smenani o'chirish xatosi:", err);
-
-      // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
-        setError(`Xatolik: ${err.data.user_id}`);
-      } else if (err.message) {
-        setError(`Xatolik: ${err.message}`);
-      } else {
-        setError("Smenani o'chirishda xatolik");
-      }
+      setError(err.message || "Smenani o'chirishda xatolik");
     }
   };
 
@@ -241,21 +246,16 @@ const ShiftPage = () => {
   const formatTimeForServer = (time: string): string => {
     if (!time) return "00:00:00";
 
-    // Agar ":" belgisi bo'lsa
     if (time.includes(":")) {
       const parts = time.split(":");
       if (parts.length === 1) {
-        // Faqat soat: "09" -> "09:00:00"
         return `${parts[0].padStart(2, "0")}:00:00`;
       } else if (parts.length === 2) {
-        // Soat va minut: "09:00" -> "09:00:00"
         return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}:00`;
       } else {
-        // To'liq format: "09:00:00"
         return time;
       }
     } else {
-      // Raqam: "900" -> "09:00:00"
       const paddedTime = time.padStart(4, "0");
       return `${paddedTime.substring(0, 2)}:${paddedTime.substring(2, 4)}:00`;
     }
@@ -265,14 +265,13 @@ const ShiftPage = () => {
   const formatTimeForInput = (timeString: string): string => {
     if (!timeString) return "";
 
-    // "14:28:20" -> "14:28"
     if (timeString && timeString.length >= 5) {
       return timeString.substring(0, 5);
     }
     return timeString;
   };
 
-  // Smena davomiyligini hisoblash (XATOLIKNI OLDINI OLISH UCHUN)
+  // Smena davomiyligini hisoblash
   const calculateDuration = (startTime: string, endTime: string): string => {
     try {
       const start = formatTimeForServer(startTime);
@@ -290,7 +289,6 @@ const ShiftPage = () => {
       let endHours = endParts[0];
       let endMinutes = endParts[1];
 
-      // Agar tugash vaqti boshlanish vaqtidan kichik bo'lsa, keyingi kunga o'tkazamiz
       if (
         endHours < startHours ||
         (endHours === startHours && endMinutes < startMinutes)
@@ -322,18 +320,11 @@ const ShiftPage = () => {
     return breakTime ? breakTime.name : "Tanlanmagan";
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Noma'lum";
-    return new Date(dateString).toLocaleString("uz-UZ", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const openEditModal = (shift: Shift) => {
+    // DEBUG: Tanlangan smena ma'lumotlari
+    console.log("Tanlangan smena:", shift);
+    console.log("Tanlangan smenaning approved_late_min:", shift.approved_late_min);
+    
     setShowEditShift(shift);
     setEditShift({
       name: shift.name,
@@ -341,6 +332,7 @@ const ShiftPage = () => {
       end_time: formatTimeForInput(shift.end_time),
       break_time: shift.break_time,
       user: shift.user,
+      approved_late_min: shift.approved_late_min !== undefined ? shift.approved_late_min : 0,
     });
   };
 
@@ -376,7 +368,6 @@ const ShiftPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Sarlavha */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -388,7 +379,6 @@ const ShiftPage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-          {/* Superadmin: Boshqa foydalanuvchi smenalarini yuklash */}
           {currentUser?.role === "superadmin" && (
             <div className="flex gap-2">
               <input
@@ -416,7 +406,6 @@ const ShiftPage = () => {
         </div>
       </div>
 
-      {/* Xato xabari */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <div className="flex items-center gap-2">
@@ -435,8 +424,7 @@ const ShiftPage = () => {
       {/* Yangi smena qo'shish modali */}
       {showAddShift && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                 Yangi Smena Qo'shish
@@ -490,6 +478,32 @@ const ShiftPage = () => {
                   </div>
                 </div>
 
+                {/* Approved Late Minutes field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ruxsat Etilgan Kechikish (daqiqa)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="120"
+                    placeholder="0"
+                    step="1"
+                    value={newShift.approved_late_min}
+                    onChange={(e) =>
+                      setNewShift({
+                        ...newShift,
+                        approved_late_min: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Ishchilarning necha daqiqa kech kelishi ruxsat etilgan. 
+                    Masalan: 15 (ishchi 8:00 smenada, 8:15 gacha kelishi mumkin)
+                  </p>
+                </div>
+
                 {/* Tanaffus vaqtini tanlash */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -515,9 +529,6 @@ const ShiftPage = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Smenaga biriktiriladigan tanaffus vaqtini tanlang
-                  </p>
                 </div>
 
                 {/* Superadmin uchun: Foydalanuvchiga biriktirish */}
@@ -537,12 +548,9 @@ const ShiftPage = () => {
                             : undefined,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       placeholder="O'zingizning smenalaringiz uchun bo'sh qoldiring"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Agar bo'sh qoldirsangiz, smena o'zingizga biriktiriladi
-                    </p>
                   </div>
                 )}
 
@@ -550,12 +558,10 @@ const ShiftPage = () => {
                   <p className="text-sm text-blue-700 dark:text-blue-300">
                     Smena davomiyligi: {getNewShiftDuration()}
                   </p>
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    Ruxsat etilgan kechikish: {newShift.approved_late_min || 0} daqiqa
+                  </p>
                   
-                  {newShift.break_time && (
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                      Tanaffus vaqti: {getBreakTimeName(newShift.break_time)}
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -581,7 +587,7 @@ const ShiftPage = () => {
       {/* Smenani tahrirlash modali */}
       {showEditShift && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
                 Smenani Tahrirlash
@@ -598,7 +604,7 @@ const ShiftPage = () => {
                     onChange={(e) =>
                       setEditShift({ ...editShift, name: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     placeholder="Masalan: Kunduzgi smena"
                   />
                 </div>
@@ -636,6 +642,31 @@ const ShiftPage = () => {
                   </div>
                 </div>
 
+                {/* Approved Late Minutes field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ruxsat Etilgan Kechikish (daqiqa)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="120"
+                    placeholder="0"
+                    step="1"
+                    value={editShift.approved_late_min !== undefined ? editShift.approved_late_min : (showEditShift.approved_late_min)}
+                    onChange={(e) =>
+                      setEditShift({
+                        ...editShift,
+                        approved_late_min: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Joriy qiymat: {showEditShift.approved_late_min || 0} daqiqa
+                  </p>
+                </div>
+
                 {/* Tanaffus vaqtini yangilash */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -661,10 +692,6 @@ const ShiftPage = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Joriy tanaffus vaqti:{" "}
-                    {getBreakTimeName(showEditShift.break_time)}
-                  </p>
                 </div>
 
                 {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
@@ -686,9 +713,6 @@ const ShiftPage = () => {
                       }
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Joriy foydalanuvchi ID: {showEditShift.user}
-                    </p>
                   </div>
                 )}
 
@@ -700,21 +724,10 @@ const ShiftPage = () => {
                       showEditShift.end_time
                     )}
                   </p>
-                  {editShift.start_time && editShift.end_time && (
-                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                      Yangi davomiylik:{" "}
-                      {calculateDuration(
-                        editShift.start_time,
-                        editShift.end_time
-                      )}
-                    </p>
-                  )}
-                  {showEditShift.break_time && (
-                    <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
-                      Tanaffus vaqti:{" "}
-                      {getBreakTimeName(showEditShift.break_time)}
-                    </p>
-                  )}
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    Ruxsat etilgan kechikish: {showEditShift.approved_late_min || 0} daqiqa
+                  </p>
+                  
                 </div>
               </div>
 
@@ -755,11 +768,6 @@ const ShiftPage = () => {
           <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-2">
             Smenalar topilmadi
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto mb-6">
-            {currentUser?.role === "superadmin" && !targetUserId
-              ? "Hisobingizga biriktirilgan smenalar yo'q. Boshlash uchun yangi smena qo'shing yoki boshqa foydalanuvchi smenalarini ko'rish uchun foydalanuvchi ID-sini kiriting."
-              : "Bu foydalanuvchi uchun smenalar topilmadi."}
-          </p>
           <button
             onClick={() => setShowAddShift(true)}
             className="px-6 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition"
@@ -783,10 +791,10 @@ const ShiftPage = () => {
                     Davomiylik
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Tanaffus Vaqti
+                    Ruxsat Etilgan Kechikish
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Foydalanuvchi
+                    Tanaffus Vaqti
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Harakatlar
@@ -814,7 +822,7 @@ const ShiftPage = () => {
                             Boshlanish:
                           </span>
                           <span className="font-medium text-gray-900 dark:text-white">
-                            {apiService.formatTime(shift.start_time)}
+                            {formatTimeForInput(shift.start_time)}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -822,7 +830,7 @@ const ShiftPage = () => {
                             Tugash:
                           </span>
                           <span className="font-medium text-gray-900 dark:text-white">
-                            {apiService.formatTime(shift.end_time)}
+                            {formatTimeForInput(shift.end_time)}
                           </span>
                         </div>
                       </div>
@@ -833,40 +841,47 @@ const ShiftPage = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      {shift.approved_late_min && shift.approved_late_min > 0 ? (
+                        <div className="space-y-1">
+                          <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-sm font-medium rounded-full">
+                            {shift.approved_late_min} daqiqa
+                          </span>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTimeForInput(shift.start_time)} dan {shift.approved_late_min} daqiqa keyingacha
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 text-sm font-medium rounded-full">
+                          Ruxsat etilmagan
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
                       {shift.break_time ? (
                         <div>
                           <div className="font-medium text-gray-900 dark:text-white mb-1">
                             {getBreakTimeName(shift.break_time)}
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {(() => {
-                              const breakTime = breakTimes.find(
-                                (bt) => bt.id === shift.break_time
+                          {(() => {
+                            const breakTime = breakTimes.find(
+                              (bt) => bt.id === shift.break_time
+                            );
+                            if (breakTime) {
+                              return (
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatTimeForInput(breakTime.start_time)} -{" "}
+                                  {formatTimeForInput(breakTime.end_time)}
+                                </div>
                               );
-                              if (breakTime) {
-                                return `${formatTimeForInput(
-                                  breakTime.start_time
-                                )} - ${formatTimeForInput(breakTime.end_time)}`;
-                              }
-                              return "Vaqt ko'rsatilmagan";
-                            })()}
-                          </div>
+                            }
+                            return null;
+                          })()}
                         </div>
                       ) : (
                         <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 text-sm font-medium rounded-full">
                           Tanlanmagan
                         </span>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        <span className="font-medium">ID:</span> {shift.user}
-                        {currentUser?.id === shift.user && (
-                          <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded">
-                            Siz
-                          </span>
-                        )}
-                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">

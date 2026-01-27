@@ -65,6 +65,7 @@ export interface DailyAttendance {
     chiqish: string | null;
     late: string;
     face: string;
+    position: string;
   }>;
   stats: {
     total: number;
@@ -221,6 +222,7 @@ export interface Shift {
   break_time: number | null; // Add this field - can be null
   created_at?: string;
   updated_at?: string;
+  approved_late_min: number;
 }
 
 export interface CreateShiftRequest {
@@ -228,7 +230,8 @@ export interface CreateShiftRequest {
   start_time: string;
   end_time: string;
   break_time?: number | null; // Add this optional field
-  user?: number; // Only for superadmin to assign to specific user
+  user?: number;
+  approved_late_min: number; // Only for superadmin to assign to specific user
 }
 
 export interface UpdateShiftRequest {
@@ -237,6 +240,7 @@ export interface UpdateShiftRequest {
   end_time?: string;
   break_time?: number | null; // Add this optional field
   user?: number;
+  approved_late_min: any;
 }
 
  // WorkDay (Ish kunlari) interfaces

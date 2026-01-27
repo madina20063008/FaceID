@@ -1129,27 +1129,23 @@ formatWorkDays(days: string[]): string {
   
   return `${formattedDays.length} kun (${formattedDays.slice(0, 2).join(', ')}...)`;
 }
-// Update the getShifts method - FIXED URL
+// api.ts faylida quyidagi o'zgartirishlarni amalga oshiring:
+
 async getShifts(userId?: number): Promise<Shift[]> {
-  
   try {
     const params = new URLSearchParams();
     
-    // SUPERADMIN UCHUN MUHIM: user_id ni har doim yuborish kerak
-    // Agar superadmin boshqa foydalanuvchi smenalarini ko'rmoqchi bo'lsa
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
     } else {
-      // Oddiy admin yoki o'z smenalari uchun
       params.append('user_id', this.USER_ID.toString());
     }
     
-    // FIX: Use the correct endpoint with user_id parameter
     const endpoint = `/day/shift/?${params.toString()}`;
     
     const response = await this.request<Shift[]>(endpoint);
     
-    // Format the response to include break_time field
+    // Format the response to include all fields
     if (response && Array.isArray(response)) {
       return response.map(shift => ({
         id: shift.id || 0,
@@ -1158,6 +1154,7 @@ async getShifts(userId?: number): Promise<Shift[]> {
         end_time: shift.end_time || '',
         user: shift.user || this.USER_ID,
         break_time: shift.break_time || null,
+        approved_late_min: shift.approved_late_min !== undefined ? shift.approved_late_min : 0, // ✅ Yangi qo'shildi
         created_at: shift.created_at,
         updated_at: shift.updated_at
       }));
@@ -1166,26 +1163,11 @@ async getShifts(userId?: number): Promise<Shift[]> {
     return response || [];
   } catch (error) {
     console.error('❌ Smenalarni yuklashda xatolik:', error);
-    
-    // Debug uchun API responseni ko'rish
-    if ((error as any).status === 400) {
-      console.log('⚠️ 400 xatosi: Noto\'g\'ri user_id yoki parametrlar');
-    } else if ((error as any).status === 401) {
-      console.log('⚠️ 401 xatosi: Kirish huquqi yo\'q');
-    } else if ((error as any).status === 403) {
-      console.log('⚠️ 403 xatosi: Ruxsat yo\'q');
-    } else if ((error as any).status === 404) {
-      console.log('⚠️ 404 xatosi: Endpoint topilmadi');
-    }
-    
-    // Demo/fallback uchun
     return this.getShifts();
   }
 }
 
-// Update createShift method to include user_id in URL
 async createShift(data: CreateShiftRequest): Promise<Shift> {
-  
   try {
     // API ga yuboriladigan ma'lumotlar
     const shiftData: any = {
@@ -1199,14 +1181,17 @@ async createShift(data: CreateShiftRequest): Promise<Shift> {
       shiftData.break_time = data.break_time;
     }
     
+    // Add approved_late_min if provided ✅ Yangi qo'shildi
+    if (data.approved_late_min !== undefined) {
+      shiftData.approved_late_min = data.approved_late_min;
+    }
+    
     // user_id ni query parametr sifatida yuborish
     const params = new URLSearchParams();
     
-    // Agar superadmin boshqa foydalanuvchiga smena biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
       params.append('user_id', data.user.toString());
     } else {
-      // Oddiy admin yoki o'z smenalari uchun
       params.append('user_id', this.USER_ID.toString());
     }
     
@@ -1219,28 +1204,11 @@ async createShift(data: CreateShiftRequest): Promise<Shift> {
     return response;
   } catch (error) {
     console.error('❌ Smena yaratishda xatolik:', error);
-    
-    // Xatolik tafsilotlarini chiqarish
-    if ((error as any).status === 400) {
-      const errorData = (error as any).data;
-      console.error('❌ Validation errors:', errorData);
-      
-      if (errorData) {
-        let errorMsg = 'Validation error: ';
-        Object.keys(errorData).forEach(key => {
-          errorMsg += `${key}: ${errorData[key]}; `;
-        });
-        throw new Error(errorMsg);
-      }
-    }
-    
     throw error;
   }
 }
 
-// Update updateShift method to include user_id in URL
 async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
-  
   try {
     // Yangilash uchun tayyor ma'lumot
     const updateData: any = {};
@@ -1250,14 +1218,17 @@ async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
     if (data.end_time !== undefined) updateData.end_time = data.end_time;
     if (data.break_time !== undefined) updateData.break_time = data.break_time;
     
+    // Add approved_late_min if provided ✅ Yangi qo'shildi
+    if (data.approved_late_min !== undefined) {
+      updateData.approved_late_min = data.approved_late_min;
+    }
+    
     // user_id ni query parametr sifatida yuborish
     const params = new URLSearchParams();
     
-    // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
     if (data.user !== undefined) {
       params.append('user_id', data.user.toString());
     } else {
-      // Agar foydalanuvchi o'zgartirilmasa, joriy user_id ni yuborish
       params.append('user_id', this.USER_ID.toString());
     }
     
@@ -1321,7 +1292,78 @@ async getTelegramChannels(userId?: number): Promise<TelegramChannel[]> {
   }
 }
 // In the ApiService class, add these Branch methods:
+// api.ts faylida quyidagi metodni qo'shing:
 
+// Kunlik hisobotni Excel formatda yuklash
+async getDailyExcelReport(date: string): Promise<Blob> {
+  
+  try {
+    // Validate date
+    if (!date) {
+      throw new Error('Sana kiritilmagan');
+    }
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    params.append('date', date);
+    params.append('user_id', this.USER_ID.toString());
+    
+    const endpoint = `/person/daily-excel/?${params.toString()}`;
+    
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.getAccessToken()}`,
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Excel hisobotini olishda xatolik:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      
+      if (response.status === 404) {
+        throw new Error('Berilgan sana uchun hisobot topilmadi');
+      } else if (response.status === 400) {
+        throw new Error('Noto\'g\'ri sana formati. YYYY-MM-DD formatida kiriting');
+      } else if (response.status === 403) {
+        throw new Error('Excel hisobotini olish uchun ruxsat yo\'q');
+      } else {
+        throw new Error(`Server xatosi: ${response.status}`);
+      }
+    }
+    
+    // Excel faylini Blob sifatida olish
+    const blob = await response.blob();
+    
+    // Fayl turini tekshirish
+    if (blob.type.includes('spreadsheet') || blob.type.includes('excel') || blob.type.includes('octet-stream')) {
+      return blob;
+    } else {
+      // Agar Excel formatda bo'lmasa, JSON response bo'lishi mumkin
+      const text = await blob.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(`JSON response qaytdi: ${JSON.stringify(json)}`);
+      } catch {
+        throw new Error(`Noto'g'ri fayl formati: ${blob.type}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Kunlik Excel hisobotini olishda xatolik:', error);
+    
+    const err = error as any;
+    if (err.message?.includes('Sana kiritilmagan')) {
+      throw new Error('Sana kiritilmagan');
+    }
+    
+    throw error;
+  }
+}
 // Barcha filiallarni olish
 async getBranches(userId?: number): Promise<Branch[]> {
   

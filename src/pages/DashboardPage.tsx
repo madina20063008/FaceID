@@ -724,7 +724,8 @@ export function DashboardPage() {
                               {employee.name}
                             </span>
                             <div className="flex gap-2 text-xs text-gray-500">
-                              <span>ID: {employee.employee_id}</span>{" "}
+                              {/* CHANGED FROM employee_id TO position */}
+                              <span>{employee.position || "Kiritilmagan"}</span>
                             </div>
                           </div>
                         </div>
