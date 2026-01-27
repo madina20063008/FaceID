@@ -125,25 +125,24 @@ export function Layout({ children }: LayoutProps) {
       const branchesData = await apiService.getBranches();
       setBranches(branchesData);
       
-      // Check localStorage for saved branch
-      const savedBranchId = localStorage.getItem('selected_branch_id');
-      const savedBranchName = localStorage.getItem('selected_branch_name');
-      
-      if (savedBranchId && savedBranchName && branchesData.length > 0) {
-        const savedBranch = branchesData.find(b => b.id.toString() === savedBranchId);
-        if (savedBranch) {
-          setSelectedBranch(savedBranch);
-        } else {
-          // If saved branch not found, select first branch
-          setSelectedBranch(branchesData[0]);
-          localStorage.setItem('selected_branch_id', branchesData[0].id.toString());
-          localStorage.setItem('selected_branch_name', branchesData[0].name);
-        }
-      } else if (branchesData.length > 0) {
-        // Select first branch by default
-        setSelectedBranch(branchesData[0]);
-        localStorage.setItem('selected_branch_id', branchesData[0].id.toString());
-        localStorage.setItem('selected_branch_name', branchesData[0].name);
+      // ALWAYS SELECT FIRST BRANCH AS DEFAULT
+      if (branchesData.length > 0) {
+        const firstBranch = branchesData[0];
+        setSelectedBranch(firstBranch);
+        
+        // Save to localStorage
+        localStorage.setItem('selected_branch_id', firstBranch.id.toString());
+        localStorage.setItem('selected_branch_name', firstBranch.name);
+        
+        // Trigger branch changed event for dashboard
+        window.dispatchEvent(new CustomEvent('branchChanged', { 
+          detail: { 
+            id: firstBranch.id, 
+            name: firstBranch.name,
+            device: firstBranch.device,
+            user: firstBranch.user
+          } 
+        }));
       }
     } catch (error) {
       console.error("Filiallarni yuklashda xatolik:", error);
@@ -269,7 +268,7 @@ export function Layout({ children }: LayoutProps) {
                     ) : branches.length > 0 ? (
                       branches[0].name
                     ) : (
-                      "Filial tanlanmagan"
+                      "Filial yo'q"
                     )}
                   </span>
                 </div>
@@ -291,7 +290,11 @@ export function Layout({ children }: LayoutProps) {
                       <button
                         key={branch.id}
                         onClick={() => handleBranchSelect(branch)}
-                        className={`w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${selectedBranch?.id === branch.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : ''}`}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                          selectedBranch?.id === branch.id 
+                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                            : ''
+                        }`}
                       >
                         <div className="text-sm font-medium">{branch.name}</div>
                         {branch.device && (
@@ -376,14 +379,14 @@ export function Layout({ children }: LayoutProps) {
             <div className="lg:hidden flex items-center gap-2">
               <Landmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
               <span className="text-sm font-medium truncate max-w-[150px]">
-                {selectedBranch ? selectedBranch.name : "Filial tanlanmagan"}
+                {selectedBranch ? selectedBranch.name : "Yuklanmoqda..."}
               </span>
             </div>
 
             <div className="flex-1 lg:flex hidden items-center gap-2">
               <Landmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
               <span className="text-sm font-medium">
-                {selectedBranch ? selectedBranch.name : "Filial tanlanmagan"}
+                {selectedBranch ? selectedBranch.name : "Yuklanmoqda..."}
               </span>
             </div>
 
