@@ -1364,7 +1364,7 @@ async getDailyExcelReport(date: string): Promise<Blob> {
     throw error;
   }
 }
-// Barcha filiallarni olish
+// Barcha filiallarni olish - device fieldini QAYTARISH
 async getBranches(userId?: number): Promise<Branch[]> {
   
   try {
@@ -1380,7 +1380,21 @@ async getBranches(userId?: number): Promise<Branch[]> {
     
     const endpoint = `/utils/branch/${params.toString() ? '?' + params.toString() : ''}`;
     const response = await this.request<Branch[]>(endpoint);
-    return response;
+    
+    
+    // Response ni formatlash va device fieldini QAYTARISH
+    if (response && Array.isArray(response)) {
+      return response.map(branch => ({
+        id: branch.id || 0,
+        name: branch.name || '',
+        device: branch.device !== undefined ? branch.device : null, // ✅ Serverdan qaytgan device ni qaytarish
+        user: branch.user || this.USER_ID,
+        created_at: branch.created_at,
+        updated_at: branch.updated_at
+      }));
+    }
+    
+    return response || [];
   } catch (error) {
     console.error('❌ Filiallarni yuklashda xatolik:', error);
     
@@ -1389,13 +1403,20 @@ async getBranches(userId?: number): Promise<Branch[]> {
   }
 }
 
-// Yangi filial yaratish
+// Yangi filial yaratish - device fieldini YUBORISH
 async createBranch(data: CreateBranchRequest): Promise<Branch> {
   
   try {
     const branchData: any = {
       name: data.name,
     };
+    
+    // ✅ MUXIM: device fieldini YUBORISH (null bo'lishi mumkin)
+    if (data.device !== undefined) {
+      branchData.device = data.device;
+    } else {
+      branchData.device = null; // Agar kiritilmagan bo'lsa, null yuborish
+    }
     
     // Agar superadmin boshqa foydalanuvchiga filial biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
@@ -1406,19 +1427,41 @@ async createBranch(data: CreateBranchRequest): Promise<Branch> {
     }
     
     
+    // DEBUG: Serverga yuborilayotgan ma'lumot
+    console.log('Serverga yuborilayotgan filial ma\'lumoti:', branchData);
+    
     const endpoint = `/utils/branch/`;
     const response = await this.request<Branch>(endpoint, {
       method: 'POST',
       body: JSON.stringify(branchData),
     });
     
+    // DEBUG: Serverdan qaytgan javob
+    console.log('Serverdan qaytgan filial javobi:', response);
+    
     return response;
   } catch (error) {
     console.error('❌ Filial yaratishda xatolik:', error);
+    
+    // Xatolik tafsilotlarini chiqarish
+    if ((error as any).status === 400) {
+      const errorData = (error as any).data;
+      console.error('❌ Validation errors:', errorData);
+      
+      if (errorData) {
+        let errorMsg = 'Validation error: ';
+        Object.keys(errorData).forEach(key => {
+          errorMsg += `${key}: ${errorData[key]}; `;
+        });
+        throw new Error(errorMsg);
+      }
+    }
+    
     throw error;
   }
 }
 
+// Filialni yangilash - device fieldini YANGILASH
 async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
   
   try {
@@ -1426,6 +1469,11 @@ async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
     const updateData: any = {};
     
     if (data.name !== undefined) updateData.name = data.name;
+    
+    // ✅ MUXIM: device fieldini YANGILASH
+    if (data.device !== undefined) {
+      updateData.device = data.device;
+    }
     
     // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
     if (data.user !== undefined) {
@@ -1435,6 +1483,8 @@ async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
       updateData.user_id = this.USER_ID;
     }
     
+    // DEBUG: Serverga yuborilayotgan yangilash ma'lumotlari
+    console.log(`Filial ${id} ni yangilash uchun ma'lumot:`, updateData);
     
     // FIX: Add user_id parameter to the URL
     const params = new URLSearchParams();
@@ -1447,12 +1497,78 @@ async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
       body: JSON.stringify(updateData),
     });
     
+    // DEBUG: Serverdan qaytgan yangilangan filial
+    console.log('Yangilangan filial:', response);
+    
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li filialni yangilashda xatolik:`, error);
+    
+    // Xatolik tafsilotlarini chiqarish
+    if ((error as any).status === 400) {
+      const errorData = (error as any).data;
+      console.error('❌ Validation errors:', errorData);
+      
+      if (errorData) {
+        let errorMsg = 'Validation error: ';
+        Object.keys(errorData).forEach(key => {
+          errorMsg += `${key}: ${errorData[key]}; `;
+        });
+        throw new Error(errorMsg);
+      }
+    }
+    
     throw error;
   }
 }
+
+// Mock filial ma'lumotlari (fallback uchun) - device bilan yangilang
+private getMockBranches(): Branch[] {
+  return [
+    {
+      id: 1,
+      name: 'Bosh filial',
+      device: 1, // ✅ Device ID
+      created_at: '2024-01-15T10:30:00Z',
+      user: 2
+    },
+    {
+      id: 2,
+      name: 'Shahar markazi filiali',
+      device: 2, // ✅ Device ID
+      created_at: '2024-01-16T11:20:00Z',
+      user: 2
+    },
+    {
+      id: 3,
+      name: 'Yangi shahar filiali',
+      device: null, // ✅ Device yo'q (null)
+      created_at: '2024-01-17T09:15:00Z',
+      user: 3
+    }
+  ];
+}
+
+// Yangi: Device ro'yxatini olish funksiyasi
+async getDevicesForBranch(): Promise<{id: number, name: string, ip: string}[]> {
+  try {
+    const devices = await this.getDevices();
+    return devices.map(device => ({
+      id: device.id,
+      name: device.name,
+      ip: device.ip
+    }));
+  } catch (error) {
+    console.error('❌ Device ro\'yxatini olishda xatolik:', error);
+    // Mock device ro'yxati qaytarish
+    return [
+      { id: 1, name: 'Hikvision DS-2CD2143G0-I', ip: '192.168.1.100' },
+      { id: 2, name: 'Dahua IPC-HDW5842H-ASE', ip: '192.168.1.101' },
+      { id: 3, name: 'AXIS M3046-V', ip: '192.168.1.102' }
+    ];
+  }
+}
+
 
 // Filialni o'chirish - FIXED: Add user_id parameter to URL
 async deleteBranch(id: number): Promise<void> {
@@ -1474,29 +1590,6 @@ async deleteBranch(id: number): Promise<void> {
   }
 }
 
-// Mock filial ma'lumotlari (fallback uchun)
-private getMockBranches(): Branch[] {
-  return [
-    {
-      id: 1,
-      name: 'Bosh filial',
-      created_at: '2024-01-15T10:30:00Z',
-      user: 2
-    },
-    {
-      id: 2,
-      name: 'Shahar markazi filiali',
-      created_at: '2024-01-16T11:20:00Z',
-      user: 2
-    },
-    {
-      id: 3,
-      name: 'Yangi shahar filiali',
-      created_at: '2024-01-17T09:15:00Z',
-      user: 3
-    }
-  ];
-}
 // Yangi Telegram kanali yaratish
 async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<TelegramChannel> {
   
@@ -2435,48 +2528,56 @@ private getMockDevices(): Device[] {
     }
   }
 
-  // NEW: Get daily attendance list
   async getDailyAttendance(date?: string): Promise<DailyAttendance> {
-    try {
-      // Format date if provided, otherwise use current date
-      let selectedDate: string;
-      if (date) {
-        selectedDate = date;
-      } else {
-        selectedDate = formatDate(new Date());
-      }
-      
-      // user_id bilan so'rov yuborish
-      const endpoint = `/person/daily-list/?date=${selectedDate}&user_id=${this.USER_ID}`;
-      
-      const response = await this.request<DailyAttendance>(endpoint);
-      
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to load daily attendance:', error);
-      
-      // Agar API xato bersa, mock ma'lumotlarni qaytaring
-      
-      return {
-        date: date || formatDate(new Date()),
-        employees: mockEmployees.map((emp, index) => ({
-          id: emp.id,
-          employee_no: emp.employee_no,
-          name: emp.name,
-          kirish: index === 0 ? '09:00' : null,
-          chiqish: index === 0 ? '18:00' : null,
-          late: '0:00',
-          face: emp.local_face,
-        })),
-        stats: {
-          total: mockEmployees.length,
-          came: 1,
-          late: 0,
-          absent: mockEmployees.length - 1,
-        },
-      };
+  try {
+    // Format date if provided, otherwise use current date
+    let selectedDate: string;
+    if (date) {
+      selectedDate = date;
+    } else {
+      selectedDate = formatDate(new Date());
     }
+    
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    // Build endpoint URL with all parameters
+    let endpoint = `/person/daily-list/?date=${selectedDate}&user_id=${this.USER_ID}`;
+    
+    // Add branch_id if available
+    if (branchId) {
+      endpoint += `&branch_id=${branchId}`;
+    }
+    
+    console.log('📡 Fetching attendance from:', endpoint); // Debug log
+    
+    const response = await this.request<DailyAttendance>(endpoint);
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Failed to load daily attendance:', error);
+    
+    // Fallback to mock data
+    return {
+      date: date || formatDate(new Date()),
+      employees: mockEmployees.map((emp, index) => ({
+        id: emp.id,
+        employee_no: emp.employee_no,
+        name: emp.name,
+        kirish: index === 0 ? '09:00' : null,
+        chiqish: index === 0 ? '18:00' : null,
+        late: '0:00',
+        face: emp.local_face,
+      })),
+      stats: {
+        total: mockEmployees.length,
+        came: 1,
+        late: 0,
+        absent: mockEmployees.length - 1,
+      },
+    };
   }
+}
 
   // Check if user is logged in
   isLoggedIn(): boolean {

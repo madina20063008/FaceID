@@ -6,11 +6,12 @@ import {
   Branch, 
   CreateBranchRequest,
   UpdateBranchRequest,
-  User 
+  User
 } from '../lib/types';
 
 const FilialPage = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [devices, setDevices] = useState<{id: number, name: string, ip: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -19,16 +20,19 @@ const FilialPage = () => {
   const [showEditBranch, setShowEditBranch] = useState<Branch | null>(null);
   const [newBranch, setNewBranch] = useState<CreateBranchRequest>({
     name: '',
+    device: null, // ✅ Default null
     user: undefined
   });
   const [editBranch, setEditBranch] = useState<UpdateBranchRequest>({
     name: '',
+    device: undefined, // Tahrirlashda undefined bo'lishi kerak
     user: undefined
   });
 
-  // Filiallarni yuklash
+  // Filiallarni va devicelarni yuklash
   useEffect(() => {
     loadCurrentUserAndBranches();
+    loadDevices();
   }, []);
 
   const loadCurrentUserAndBranches = async (userId?: number) => {
@@ -42,6 +46,13 @@ const FilialPage = () => {
       
       // Filiallarni olish
       const branchesData = await apiService.getBranches(userId);
+      console.log('API dan qaytgan filiallar:', branchesData); // DEBUG
+      
+      // Device ID larni tekshirish
+      branchesData.forEach(branch => {
+        console.log(`Filial ${branch.id}: device=${branch.device}, type=${typeof branch.device}`);
+      });
+      
       setBranches(branchesData);
     } catch (err: any) {
       console.error('Filiallarni yuklashda xatolik:', err);
@@ -54,6 +65,23 @@ const FilialPage = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Device ro'yxatini yuklash
+  const loadDevices = async () => {
+    try {
+      const devicesData = await apiService.getDevicesForBranch();
+      setDevices(devicesData);
+      console.log('Yuklangan devicelar:', devicesData); // DEBUG
+    } catch (err: any) {
+      console.error('Device ro\'yxatini yuklashda xatolik:', err);
+      // Default device ro'yxati
+      setDevices([
+        { id: 1, name: 'Hikvision DS-2CD2143G0-I', ip: '192.168.1.100' },
+        { id: 2, name: 'Dahua IPC-HDW5842H-ASE', ip: '192.168.1.101' },
+        { id: 3, name: 'AXIS M3046-V', ip: '192.168.1.102' }
+      ]);
     }
   };
 
@@ -80,6 +108,7 @@ const FilialPage = () => {
     
     const formattedData: CreateBranchRequest = {
       name: newBranch.name,
+      device: newBranch.device !== undefined ? newBranch.device : null, // ✅ Device ni yuborish
     };
     
     // Agar foydalanuvchi superadmin bo'lsa va user ID kiritgan bo'lsa
@@ -87,15 +116,21 @@ const FilialPage = () => {
       formattedData.user = newBranch.user;
     }
     
+    // DEBUG: Yuborilayotgan ma'lumot
+    console.log('Yuborilayotgan filial ma\'lumoti:', formattedData);
     
     try {
-      await apiService.createBranch(formattedData);
+      const createdBranch = await apiService.createBranch(formattedData);
+      
+      // DEBUG: Yaratilgan filial
+      console.log('Yaratilgan filial:', createdBranch);
       
       // Filiallarni qayta yuklash
       await loadCurrentUserAndBranches();
       setShowAddBranch(false);
       setNewBranch({
         name: '',
+        device: null,
         user: undefined
       });
     } catch (err: any) {
@@ -125,6 +160,14 @@ const FilialPage = () => {
         updateData.name = editBranch.name;
       }
       
+      // ✅ Device fieldini yangilash
+      // Agar editBranch.device undefined bo'lsa, uni o'zgartirmaymiz
+      // Agar editBranch.device null bo'lsa, null yuboramiz
+      // Agar editBranch.device raqam bo'lsa, o'sha raqamni yuboramiz
+      if (editBranch.device !== undefined) {
+        updateData.device = editBranch.device;
+      }
+      
       // Agar foydalanuvchi superadmin bo'lsa
       if (currentUser?.role === 'superadmin' && editBranch.user !== undefined) {
         updateData.user = editBranch.user;
@@ -136,13 +179,22 @@ const FilialPage = () => {
         return;
       }
       
-      await apiService.updateBranch(showEditBranch.id, updateData);
+      // DEBUG: Yangilash ma'lumotlari
+      console.log('Filialni yangilash ma\'lumotlari:', updateData);
+      console.log('Eski device:', showEditBranch.device);
+      console.log('Yangi device:', editBranch.device);
+      
+      const updatedBranch = await apiService.updateBranch(showEditBranch.id, updateData);
+      
+      // DEBUG: Yangilangan filial
+      console.log('Yangilangan filial:', updatedBranch);
       
       // Filiallarni qayta yuklash
       await loadCurrentUserAndBranches();
       setShowEditBranch(null);
       setEditBranch({
         name: '',
+        device: undefined,
         user: undefined
       });
     } catch (err: any) {
@@ -195,10 +247,21 @@ const FilialPage = () => {
     });
   };
 
+  // Device nomini olish
+  const getDeviceName = (deviceId?: number | null): string => {
+    if (deviceId === null || deviceId === undefined) return 'Device tanlanmagan';
+    const device = devices.find(d => d.id === deviceId);
+    return device ? `${device.name} (${device.ip})` : `Device ID: ${deviceId}`;
+  };
+
   const openEditModal = (branch: Branch) => {
+    console.log('Tahrirlash uchun tanlangan filial:', branch);
+    console.log('Filial device qiymati:', branch.device, 'type:', typeof branch.device);
+    
     setShowEditBranch(branch);
     setEditBranch({
       name: branch.name,
+      device: branch.device !== undefined ? branch.device : null, // ✅ Device qiymatini o'rnatish
       user: branch.user
     });
   };
@@ -293,6 +356,34 @@ const FilialPage = () => {
                   />
                 </div>
                 
+                {/* Device tanlash */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Device biriktirish (ixtiyoriy)
+                  </label>
+                  <select
+                    value={newBranch.device === null ? '' : newBranch.device || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewBranch({
+                        ...newBranch, 
+                        device: value === '' ? null : parseInt(value)
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Device tanlanmagan</option>
+                    {devices.map(device => (
+                      <option key={device.id} value={device.id}>
+                        {device.name} ({device.ip})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Filialga qaysi device biriktirilganligini belgilang
+                  </p>
+                </div>
+                
                 {/* Superadmin uchun: Foydalanuvchiga biriktirish */}
                 {currentUser?.role === 'superadmin' && (
                   <div>
@@ -356,6 +447,34 @@ const FilialPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                     placeholder="Masalan: Bosh filial"
                   />
+                </div>
+                
+                {/* Device yangilash */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Device
+                  </label>
+                  <select
+                    value={editBranch.device === null ? '' : editBranch.device || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setEditBranch({
+                        ...editBranch, 
+                        device: value === '' ? null : parseInt(value)
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Device tanlanmagan</option>
+                    {devices.map(device => (
+                      <option key={device.id} value={device.id}>
+                        {device.name} ({device.ip})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Joriy device: {getDeviceName(showEditBranch.device)}
+                  </p>
                 </div>
                 
                 {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
@@ -437,6 +556,9 @@ const FilialPage = () => {
                     Filial Nomi
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Device
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Yaratilgan sana
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -454,6 +576,24 @@ const FilialPage = () => {
                       <div className="font-medium text-gray-900 dark:text-white">{branch.name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         ID: {branch.id}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm">
+                        {branch.device === null || branch.device === undefined ? (
+                          <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 rounded-full">
+                            Device tanlanmagan
+                          </span>
+                        ) : (
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {getDeviceName(branch.device)}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Device ID: {branch.device}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -492,8 +632,6 @@ const FilialPage = () => {
               </tbody>
             </table>
           </div>
-          
-        
         </div>
       )}
     </div>

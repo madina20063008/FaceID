@@ -1,10 +1,9 @@
 import { ReactNode, useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "next-themes";
 import { Button } from "../app/components/ui/button";
 import { Avatar, AvatarFallback } from "../app/components/ui/avatar";
-
 import {
   LayoutDashboard,
   Users,
@@ -24,6 +23,7 @@ import {
   SquareChartGantt,
   Bell,
   BarChart3,
+  ChevronDown,
 } from "lucide-react";
 import { apiService } from "../lib/api";
 
@@ -40,17 +40,27 @@ interface Notification {
   is_read: boolean;
 }
 
+interface Branch {
+  id: number;
+  name: string;
+  device?: number | null;
+  user?: number;
+}
+
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [branchesOpen, setBranchesOpen] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(true);
   const notificationRef = useRef<HTMLDivElement>(null);
-
-  // User dropdown state
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const branchesRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const navigation = [
@@ -69,8 +79,9 @@ export function Layout({ children }: LayoutProps) {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Load notifications
+  // Load branches and notifications
   useEffect(() => {
+    loadBranches();
     loadNotifications();
   }, []);
 
@@ -83,6 +94,14 @@ export function Layout({ children }: LayoutProps) {
         !notificationRef.current.contains(event.target as Node)
       ) {
         setNotificationOpen(false);
+      }
+
+      // Close branches dropdown
+      if (
+        branchesRef.current &&
+        !branchesRef.current.contains(event.target as Node)
+      ) {
+        setBranchesOpen(false);
       }
 
       // Close user dropdown
@@ -99,6 +118,63 @@ export function Layout({ children }: LayoutProps) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const loadBranches = async () => {
+    try {
+      setLoadingBranches(true);
+      const branchesData = await apiService.getBranches();
+      setBranches(branchesData);
+      
+      // Check localStorage for saved branch
+      const savedBranchId = localStorage.getItem('selected_branch_id');
+      const savedBranchName = localStorage.getItem('selected_branch_name');
+      
+      if (savedBranchId && savedBranchName && branchesData.length > 0) {
+        const savedBranch = branchesData.find(b => b.id.toString() === savedBranchId);
+        if (savedBranch) {
+          setSelectedBranch(savedBranch);
+        } else {
+          // If saved branch not found, select first branch
+          setSelectedBranch(branchesData[0]);
+          localStorage.setItem('selected_branch_id', branchesData[0].id.toString());
+          localStorage.setItem('selected_branch_name', branchesData[0].name);
+        }
+      } else if (branchesData.length > 0) {
+        // Select first branch by default
+        setSelectedBranch(branchesData[0]);
+        localStorage.setItem('selected_branch_id', branchesData[0].id.toString());
+        localStorage.setItem('selected_branch_name', branchesData[0].name);
+      }
+    } catch (error) {
+      console.error("Filiallarni yuklashda xatolik:", error);
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
+  const handleBranchSelect = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setBranchesOpen(false);
+    
+    // Save to localStorage
+    localStorage.setItem('selected_branch_id', branch.id.toString());
+    localStorage.setItem('selected_branch_name', branch.name);
+    
+    // Trigger event to notify other components (like Dashboard)
+    window.dispatchEvent(new CustomEvent('branchChanged', { 
+      detail: { 
+        id: branch.id, 
+        name: branch.name,
+        device: branch.device,
+        user: branch.user
+      } 
+    }));
+    
+    // Navigate to dashboard if not already there
+    if (location.pathname !== '/dashboard') {
+      navigate('/dashboard');
+    }
+  };
 
   const loadNotifications = async () => {
     try {
@@ -142,6 +218,9 @@ export function Layout({ children }: LayoutProps) {
     }
   };
 
+  // User dropdown state
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Mobile sidebar backdrop */}
@@ -159,16 +238,72 @@ export function Layout({ children }: LayoutProps) {
         } lg:translate-x-0`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <Building2 className="h-6 w-6 text-white" />
+          {/* Logo and Branch Selector */}
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="bg-blue-600 p-2 rounded-lg">
+                <Building2 className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h1 className="font-bold text-lg">TimePay</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Boshqaruv tizimi
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-lg">TimePay</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                CRM System
-              </p>
+
+            {/* Branch Selector */}
+            <div className="relative" ref={branchesRef}>
+              <button
+                onClick={() => setBranchesOpen(!branchesOpen)}
+                className={`w-full flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ${branchesOpen ? 'ring-2 ring-blue-500' : ''}`}
+                disabled={loadingBranches}
+              >
+                <div className="flex items-center gap-2">
+                  <Landmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-medium truncate">
+                    {loadingBranches ? (
+                      <span className="text-gray-500">Yuklanmoqda...</span>
+                    ) : selectedBranch ? (
+                      selectedBranch.name
+                    ) : branches.length > 0 ? (
+                      branches[0].name
+                    ) : (
+                      "Filial tanlanmagan"
+                    )}
+                  </span>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-gray-600 transition-transform ${branchesOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {branchesOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {loadingBranches ? (
+                    <div className="px-3 py-2 text-center text-sm text-gray-500">
+                      Yuklanmoqda...
+                    </div>
+                  ) : branches.length === 0 ? (
+                    <div className="px-3 py-2 text-center text-sm text-gray-500">
+                      Filiallar mavjud emas
+                    </div>
+                  ) : (
+                    branches.map((branch) => (
+                      <button
+                        key={branch.id}
+                        onClick={() => handleBranchSelect(branch)}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${selectedBranch?.id === branch.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : ''}`}
+                      >
+                        <div className="text-sm font-medium">{branch.name}</div>
+                        {branch.device && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Device ID: {branch.device}
+                          </div>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -237,7 +372,20 @@ export function Layout({ children }: LayoutProps) {
               )}
             </Button>
 
-            <div className="flex-1" />
+            {/* Current Branch Display (mobile) */}
+            <div className="lg:hidden flex items-center gap-2">
+              <Landmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <span className="text-sm font-medium truncate max-w-[150px]">
+                {selectedBranch ? selectedBranch.name : "Filial tanlanmagan"}
+              </span>
+            </div>
+
+            <div className="flex-1 lg:flex hidden items-center gap-2">
+              <Landmark className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              <span className="text-sm font-medium">
+                {selectedBranch ? selectedBranch.name : "Filial tanlanmagan"}
+              </span>
+            </div>
 
             <div className="flex items-center gap-2">
               {/* Notification Dropdown */}
@@ -379,7 +527,7 @@ export function Layout({ children }: LayoutProps) {
                 <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               </Button>
 
-              {/* User Dropdown - Custom Implementation (More reliable) */}
+              {/* User Dropdown */}
               <div className="relative" ref={userMenuRef}>
                 <Button
                   variant="ghost"
@@ -398,6 +546,13 @@ export function Layout({ children }: LayoutProps) {
                     <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
                       <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         Mening hisobim
+                      </p>
+                    </div>
+                    
+                    <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                      <p className="text-xs text-gray-500">Joriy filial:</p>
+                      <p className="text-sm font-medium">
+                        {selectedBranch ? selectedBranch.name : "Tanlanmagan"}
                       </p>
                     </div>
                     
@@ -430,7 +585,9 @@ export function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 lg:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );

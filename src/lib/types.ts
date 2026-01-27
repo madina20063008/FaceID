@@ -174,17 +174,21 @@ export interface Branch {
   id: number;
   name: string;
   created_at: string;
+  device?: any;
+  updated_at?: string;
   user: number; // user ID who owns this branch
 }
 
 export interface CreateBranchRequest {
   name: string;
+  device?: any;
   user?: number; // Only for superadmin to assign to specific user
 }
 
 export interface UpdateBranchRequest {
   name?: string;
   user?: number;
+  device?: any;
 }
 
 // Add these interfaces near other interfaces in api.ts

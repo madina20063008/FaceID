@@ -53,6 +53,7 @@ import {
   Eye,
   CheckCircle,
   XCircle,
+  Landmark,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -83,6 +84,12 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
+  
+  // Add state for current branch
+  const [currentBranch, setCurrentBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   // Employee History States
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -95,12 +102,28 @@ export function DashboardPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<string>("all"); // 'all', 'kirish', 'chiqish'
 
+  // Get current branch from localStorage
+  const getCurrentBranch = () => {
+    const savedBranchId = localStorage.getItem('selected_branch_id');
+    const savedBranchName = localStorage.getItem('selected_branch_name');
+    
+    if (savedBranchId && savedBranchName) {
+      return {
+        id: parseInt(savedBranchId),
+        name: savedBranchName
+      };
+    }
+    return null;
+  };
+
   // Load attendance data
   const loadAttendance = async (date?: string) => {
     try {
       setIsLoading(true);
 
       const dateToLoad = date || selectedDate;
+      const branch = getCurrentBranch();
+      setCurrentBranch(branch);
 
       try {
         const attendanceData = await apiService.getDailyAttendance(dateToLoad);
@@ -189,6 +212,7 @@ export function DashboardPage() {
       setIsLoadingHistory(false);
     }
   };
+  
   useEffect(() => {
     if (showHistoryModal) {
       // 🔒 Lock background scroll
@@ -542,6 +566,20 @@ export function DashboardPage() {
     loadAttendance(selectedDate);
   }, []);
 
+  // Listen for branch changes
+  useEffect(() => {
+    const handleBranchChange = () => {
+      // Reload attendance when branch changes
+      loadAttendance(selectedDate);
+    };
+
+    window.addEventListener('branchChanged', handleBranchChange);
+    
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
+  }, [selectedDate]);
+
   const filteredHistory = getFilteredHistory();
   const timesFromHistory = getEmployeeTimesFromHistory(employeeHistory);
 
@@ -550,7 +588,10 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-3xl font-bold tracking-tight">Bosh sahifa</h1>
+            
+          </div>
           <p className="text-gray-500 dark:text-gray-400">
             Kunlik davomat ma'lumotlari
             {useMockData && (
@@ -559,14 +600,21 @@ export function DashboardPage() {
                 Namuna rejim
               </span>
             )}
+            {!currentBranch && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Filial tanlanmagan
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || !currentBranch}
             className="flex-1 sm:flex-none"
+            title={!currentBranch ? "Iltimos, filial tanlang" : ""}
           >
             <RefreshCw
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -575,6 +623,23 @@ export function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Branch Warning */}
+      {!currentBranch && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="font-medium text-yellow-800 dark:text-yellow-300">
+                Filial tanlanmagan
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                Davomat ma'lumotlarini ko'rish uchun chap panel'dan filial tanlang
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -667,6 +732,16 @@ export function DashboardPage() {
                   {isRefreshing
                     ? "Tadbirlar sinxronizatsiya qilinmoqda..."
                     : "Davomat ma'lumotlari yuklanmoqda..."}
+                </p>
+              </div>
+            ) : !currentBranch ? (
+              <div className="text-center py-8">
+                <div className="mx-auto w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
+                  <Landmark className="h-8 w-8 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Filial tanlanmagan</h3>
+                <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                  Davomat ma'lumotlarini ko'rish uchun iltimos, chap panel'dan filial tanlang
                 </p>
               </div>
             ) : !attendance ? (
@@ -769,19 +844,21 @@ export function DashboardPage() {
           </div>
 
           {/* Data source info */}
-          <div className="mt-4 text-sm text-gray-500 flex items-center justify-between">
-            <div className="flex items-center">
-              <Database className="h-4 w-4 mr-2" />
-              <span>
-                {useMockData
-                  ? "Namuna ma'lumotlar ishlatilmoqda"
-                  : "Ma'lumotlar bazasidan yuklandi"}
-              </span>
+          {currentBranch && (
+            <div className="mt-4 text-sm text-gray-500 flex items-center justify-between">
+              <div className="flex items-center">
+                <Database className="h-4 w-4 mr-2" />
+                <span>
+                  {useMockData
+                    ? "Namuna ma'lumotlar ishlatilmoqda"
+                    : "Ma'lumotlar bazasidan yuklandi"}
+                </span>
+              </div>
+              <div className="text-xs">
+                Sana: {selectedDate} • Filial: {currentBranch.name} • {filteredEmployees.length} ta hodim
+              </div>
             </div>
-            <div className="text-xs">
-              Sana: {selectedDate} • {filteredEmployees.length} ta hodim
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -820,6 +897,12 @@ export function DashboardPage() {
                         <p className="text-gray-500 flex items-center gap-2 mt-1">
                           <User className="h-4 w-4" />
                           {selectedEmployeeName} • {selectedDate}
+                          {currentBranch && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              <Landmark className="h-3 w-3 mr-1" />
+                              {currentBranch.name}
+                            </Badge>
+                          )}
                         </p>
                       </div>
                     </div>
