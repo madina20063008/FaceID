@@ -113,8 +113,6 @@ const ShiftPage = () => {
       formattedData.user = newShift.user;
     }
 
-    console.log("📤 Smena yaratish ma'lumotlari:", formattedData);
-
     try {
       await apiService.createShift(formattedData);
 
@@ -187,8 +185,6 @@ const ShiftPage = () => {
         setShowEditShift(null);
         return;
       }
-
-      console.log("✏️ Smenani yangilash ma'lumotlari:", updateData);
 
       await apiService.updateShift(showEditShift.id, updateData);
 
@@ -554,11 +550,7 @@ const ShiftPage = () => {
                   <p className="text-sm text-blue-700 dark:text-blue-300">
                     Smena davomiyligi: {getNewShiftDuration()}
                   </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Serverga yuboriladigan format:{" "}
-                    {formatTimeForServer(newShift.start_time)} -{" "}
-                    {formatTimeForServer(newShift.end_time)}
-                  </p>
+                  
                   {newShift.break_time && (
                     <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
                       Tanaffus vaqti: {getBreakTimeName(newShift.break_time)}

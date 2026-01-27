@@ -118,8 +118,6 @@ const Workday = () => {
         formattedData.user = newWorkDay.user;
       }
 
-      console.log("📤 Ish kunlari yaratish ma'lumotlari:", formattedData);
-
       await apiService.createWorkDay(formattedData);
 
       // Reload data
@@ -166,8 +164,6 @@ const Workday = () => {
       ) {
         updateData.user = editWorkDay.user;
       }
-
-      console.log("✏️ Ish kunlarini yangilash ma'lumotlari:", updateData);
 
       await apiService.updateWorkDay(showEditWorkDay.id, updateData);
 
@@ -238,7 +234,6 @@ const Workday = () => {
         formattedData.user = newDayOff.user;
       }
 
-      console.log("📤 Dam olish kunlari yaratish ma'lumotlari:", formattedData);
 
       await apiService.createDayOff(formattedData);
 
@@ -282,8 +277,6 @@ const Workday = () => {
       if (currentUser?.role === "superadmin" && editDayOff.user !== undefined) {
         updateData.user = editDayOff.user;
       }
-
-      console.log("✏️ Dam olish kunlarini yangilash ma'lumotlari:", updateData);
 
       await apiService.updateDayOff(showEditDayOff.id, updateData);
 

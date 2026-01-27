@@ -66,7 +66,6 @@ export const formatTimeFromISO = (isoString: string): string => {
       hour12: false
     });
   } catch (error) {
-    console.error('Error formatting time:', error);
     return isoString;
   }
 };
@@ -85,7 +84,6 @@ export const formatDateTime = (isoString: string): { date: string, time: string 
       })
     };
   } catch (error) {
-    console.error('Error formatting date time:', error);
     return { date: isoString, time: isoString };
   }
 };
@@ -129,7 +127,6 @@ class ApiService {
 
 // In api.ts, update getEmployeeHistory method:
 async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHistory[]> {
-  console.log(`📅 Fetching employee history for employee ID: ${employeeId} on ${date}...`);
   
   try {
     // Validate parameters
@@ -141,7 +138,6 @@ async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHist
       throw new Error('Sana kiritilmagan');
     }
     
-    console.log('✅ Parameters validated:', { date, employeeId });
     
     // Build query parameters - Use employee_id parameter
     const params = new URLSearchParams();
@@ -150,20 +146,13 @@ async getEmployeeHistory(date: string, employeeId: number): Promise<EmployeeHist
     params.append('user_id', this.USER_ID.toString());   // User ID
     
     const endpoint = `/person/employee-history/?${params.toString()}`;
-    console.log('🌐 Making request to:', endpoint);
     
     // Fetch data from API
     const response = await this.request<EmployeeHistory[]>(endpoint);
-    console.log(`✅ Loaded ${response.length} history records`);
     
     return response;
   } catch (error) {
-    console.error('❌ Failed to load employee history:', error);
-    console.error('❌ Error details:', {
-      date: date,
-      employeeId: employeeId,
-      error: error
-    });
+    
     
     const err = error as any;
 
@@ -185,7 +174,6 @@ if (err.message?.includes('Noto\'g\'ri hodim ID si')) {
 
 // Variant 1 - Foydalanuvchi obunalarini olish
 async getSubscriptions(userId?: number): Promise<Subscription[]> {
-  console.log('📋 Obunalarni olish...');
   
   try {
     // Avval barcha mumkin bo'lgan endpoint'larni tekshirish
@@ -194,22 +182,17 @@ async getSubscriptions(userId?: number): Promise<Subscription[]> {
     // Variant A: Utils ichidagi subscription endpoint
     const endpointA = `/utils/subscription/?user_id=${targetUserId}`;
     
-    console.log('🔍 Testing subscription endpoints...');
     
     // Birinchi variantni sinab ko'rish
     try {
-      console.log('🌐 Trying endpoint A:', endpointA);
       const responseA = await this.request<Subscription[]>(endpointA);
-      console.log(`✅ Loaded ${responseA.length} subscriptions from endpoint A`);
       return responseA;
     } catch (errorA) {
       console.log(`❌ Endpoint A failed, trying endpoint B...`);
     }
   } catch (error) {
     console.error('❌ All subscription endpoints failed:', error);
-    
     // Mock ma'lumotlar qaytarish
-    console.log('🔄 Using mock subscriptions data');
     return this.getMockSubscriptions();
   }
   
@@ -232,7 +215,6 @@ async getAbsentEmployees(date: string): Promise<{
     date: string;
   }>;
 }> {
-  console.log(`📅 Fetching absent employees for date: ${date}`);
   
   try {
     // Validate date
@@ -246,14 +228,11 @@ async getAbsentEmployees(date: string): Promise<{
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/attendance/absent/?${params.toString()}`;
-    console.log('🌐 Making request to:', endpoint);
     
     const response = await this.request<any>(endpoint);
-    console.log(`✅ Loaded ${response.employees?.length || 0} absent employees`);
     
     return response;
   } catch (error) {
-    console.error('❌ Failed to load absent employees:', error);
     
     const err = error as any;
     if (err.message?.includes('Sana kiritilmagan')) {
@@ -273,7 +252,6 @@ async updateAbsenceStatus(data: {
   status: string;
   comment?: string;
 }): Promise<any> {
-  console.log('✏️ Updating absence status...');
   
   try {
     // Validate required fields
@@ -290,7 +268,6 @@ async updateAbsenceStatus(data: {
       user_id: this.USER_ID
     };
     
-    console.log('📦 Sending absence update data:', requestData);
     
     const endpoint = `/attendance/absent/`;
     const response = await this.request<any>(endpoint, {
@@ -298,10 +275,8 @@ async updateAbsenceStatus(data: {
       body: JSON.stringify(requestData),
     });
     
-    console.log('✅ Absence status updated successfully');
     return response;
   } catch (error) {
-    console.error('❌ Failed to update absence status:', error);
     
     const err = error as any;
     if (err.message?.includes('Barcha majburiy maydonlarni to\'ldiring')) {
@@ -340,7 +315,6 @@ async getMonthlyReport(month: number, year: number, employeeId?: number): Promis
     }>;
   }>;
 }> {
-  console.log(`📊 Fetching monthly report for ${year}-${month}...`);
   
   try {
     // Validate parameters
@@ -364,14 +338,11 @@ async getMonthlyReport(month: number, year: number, employeeId?: number): Promis
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/attendance/report/monthly/?${params.toString()}`;
-    console.log('🌐 Making request to:', endpoint);
     
     const response = await this.request<any>(endpoint);
-    console.log(`✅ Loaded monthly report with ${response.results?.length || 0} employees`);
     
     return response;
   } catch (error) {
-    console.error('❌ Failed to load monthly report:', error);
     
     const err = error as any;
     if (err.message?.includes('Oy va yil kiritilishi shart')) {
@@ -386,7 +357,6 @@ async getMonthlyReport(month: number, year: number, employeeId?: number): Promis
 
 // Variant 1 - Yangi obuna yaratish (getSubscriptions ga o'xshash)
 async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription> {
-  console.log('➕ Yangi obuna yaratish...');
   
   try {
     // Avval barcha mumkin bo'lgan endpoint'larni tekshirish
@@ -401,16 +371,13 @@ async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription>
       user_id: targetUserId,
     };
     
-    console.log('📦 Subscription data:', subscriptionData);
     
     // Birinchi variantni sinab ko'rish
     try {
-      console.log('🌐 Trying POST to endpoint A:', endpointA);
       const responseA = await this.request<Subscription>(endpointA, {
         method: 'POST',
         body: JSON.stringify(subscriptionData),
       });
-      console.log('✅ Subscription created successfully via endpoint A');
       return responseA;
     } catch (errorA) {
       console.log(`❌ Endpoint A failed, trying endpoint B...`);
@@ -418,9 +385,6 @@ async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription>
   } catch (error) {
     console.error('❌ Failed to create subscription:', error);
     
-    // Mock subscription qaytarish (agar API ishlamasa)
-    console.log('🔄 Creating mock subscription');
-    return this.getMockSubscription(data.plan_id);
   }
   
   // Fallback
@@ -429,7 +393,6 @@ async createSubscription(data: CreateSubscriptionRequest): Promise<Subscription>
 
 // Cancel subscription
 async cancelSubscription(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li obunani bekor qilish...`);
   
   try {
     const endpoint = `/utils/subscription/${id}/`;
@@ -437,7 +400,6 @@ async cancelSubscription(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ Obuna muvaffaqiyatli bekor qilindi');
   } catch (error) {
     console.error(`❌ ${id} ID-li obunani bekor qilishda xatolik:`, error);
     throw error;
@@ -480,15 +442,11 @@ private getMockSubscription(planId: number): Subscription {
 
 // In your ApiService class, update the getPlans method:
 async getPlans(): Promise<Plan[]> {
-  console.log('💰 Tariflarni olish...');
   
   try {
     const endpoint = `/utils/plan/`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<Plan[]>(endpoint);
-    console.log(`✅ ${response.length} ta tarif yuklandi`);
-    console.log('📊 Response data:', response); // Add this to debug
     
     // Response formatini tekshirish va kerak bo'lsa formatlash
     if (response && Array.isArray(response)) {
@@ -513,14 +471,12 @@ async getPlans(): Promise<Plan[]> {
     console.error('❌ Tariflarni yuklashda xatolik:', error);
     
     // Demo/fallback uchun
-    console.log('🔄 Mock tarif ma\'lumotlari ishlatilmoqda');
     return this.getMockPlans();
   }
 }
 
 // Yangi tarif yaratish
 async createPlan(data: CreatePlanRequest): Promise<Plan> {
-  console.log('➕ Yangi tarif yaratish...');
   
   try {
     // API ga yuboriladigan ma'lumotlar
@@ -536,7 +492,6 @@ async createPlan(data: CreatePlanRequest): Promise<Plan> {
       planData.duration_months = data.duration_months;
     }
     
-    console.log('📦 Tarif ma\'lumotlari:', planData);
     
     const endpoint = `/utils/plan/`;
     const response = await this.request<Plan>(endpoint, {
@@ -544,7 +499,6 @@ async createPlan(data: CreatePlanRequest): Promise<Plan> {
       body: JSON.stringify(planData),
     });
     
-    console.log('✅ Tarif muvaffaqiyatli yaratildi:', response);
     return response;
   } catch (error) {
     console.error('❌ Tarif yaratishda xatolik:', error);
@@ -569,7 +523,6 @@ async createPlan(data: CreatePlanRequest): Promise<Plan> {
 
 // Tarifni yangilash
 async updatePlan(id: number, data: UpdatePlanRequest): Promise<Plan> {
-  console.log(`✏️ ${id} ID-li tarifni yangilash...`);
   
   try {
     // Yangilash uchun tayyor ma'lumot
@@ -581,17 +534,14 @@ async updatePlan(id: number, data: UpdatePlanRequest): Promise<Plan> {
     if (data.price !== undefined) updateData.price = data.price;
     if (data.duration_months !== undefined) updateData.duration_months = data.duration_months;
     
-    console.log('📦 Yangilash ma\'lumotlari:', updateData);
     
     const endpoint = `/utils/plan/${id}/`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<Plan>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ Tarif muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li tarifni yangilashda xatolik:`, error);
@@ -601,7 +551,6 @@ async updatePlan(id: number, data: UpdatePlanRequest): Promise<Plan> {
 
 // Tarifni o'chirish
 async deletePlan(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li tarifni o'chirish...`);
   
   try {
     const endpoint = `/utils/plan/${id}/`;
@@ -609,7 +558,6 @@ async deletePlan(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ Tarif muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li tarifni o\'chirishda xatolik:`, error);
     throw error;
@@ -665,14 +613,11 @@ private getMockPlans(): Plan[] {
 }
 
 async getNotifications(): Promise<Notification[]> {
-  console.log('🔔 Fetching notifications...');
   
   try {
     const endpoint = `/utils/notification/`;
-    console.log('🌐 Making request to:', endpoint);
     
     const response = await this.request<Notification[]>(endpoint);
-    console.log(`✅ Loaded ${response.length} notifications`);
     return response;
   } catch (error) {
     console.error('❌ Failed to load notifications:', error);
@@ -682,24 +627,20 @@ async getNotifications(): Promise<Notification[]> {
 
 // Barcha tanaffus vaqtlarini olish
 async getBreakTimes(userId?: number): Promise<BreakTime[]> {
-  console.log('⏱️ Tanaffus vaqtlarini olish...');
   
   try {
     const params = new URLSearchParams();
     
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin ${userId} foydalanuvchisining tanaffus vaqtlarini olish`);
     } else {
       // Oddiy admin yoki o'z tanaffus vaqtlari uchun
       params.append('user_id', this.USER_ID.toString());
     }
     
     const endpoint = `/day/break_time/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<BreakTime[]>(endpoint);
-    console.log(`✅ ${response.length} ta tanaffus vaqti yuklandi`);
     
     // Response formatini tekshirish va kerak bo'lsa formatlash
     if (response && Array.isArray(response)) {
@@ -730,14 +671,12 @@ async getBreakTimes(userId?: number): Promise<BreakTime[]> {
     }
     
     // Demo/fallback uchun
-    console.log('🔄 Mock tanaffus vaqtlari ishlatilmoqda');
     return this.getMockBreakTimes();
   }
 }
 
 // Yangi tanaffus vaqti yaratish
 async createBreakTime(data: CreateBreakTimeRequest): Promise<BreakTime> {
-  console.log('➕ Yangi tanaffus vaqti yaratish...');
   
   try {
     // API ga yuboriladigan ma'lumotlar
@@ -749,7 +688,6 @@ async createBreakTime(data: CreateBreakTimeRequest): Promise<BreakTime> {
     
     // SUPERADMIN UCHUN: Agar boshqa foydalanuvchiga tanaffus vaqti yaratmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
-      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga tanaffus vaqti yaratmoqda`);
       // user_id ni query parametr sifatida yuborish
     }
     
@@ -757,16 +695,12 @@ async createBreakTime(data: CreateBreakTimeRequest): Promise<BreakTime> {
     const params = new URLSearchParams();
     params.append('user_id', data.user?.toString() || this.USER_ID.toString());
     
-    console.log('📦 Tanaffus vaqti ma\'lumotlari:', breakTimeData);
-    console.log('🔗 Query parametrlar:', params.toString());
-    
     const endpoint = `/day/break_time/?${params.toString()}`;
     const response = await this.request<BreakTime>(endpoint, {
       method: 'POST',
       body: JSON.stringify(breakTimeData),
     });
     
-    console.log('✅ Tanaffus vaqti muvaffaqiyatli yaratildi:', response);
     return response;
   } catch (error) {
     console.error('❌ Tanaffus vaqti yaratishda xatolik:', error);
@@ -791,7 +725,6 @@ async createBreakTime(data: CreateBreakTimeRequest): Promise<BreakTime> {
 
 // Tanaffus vaqtini yangilash
 async updateBreakTime(id: number, data: UpdateBreakTimeRequest): Promise<BreakTime> {
-  console.log(`✏️ ${id} ID-li tanaffus vaqtini yangilash...`);
   
   try {
     // Yangilash uchun tayyor ma'lumot
@@ -809,21 +742,16 @@ async updateBreakTime(id: number, data: UpdateBreakTimeRequest): Promise<BreakTi
       updateData.user_id = this.USER_ID;
     }
     
-    console.log('📦 Yangilash ma\'lumotlari:', updateData);
-    
     // user_id parametrini URL ga qo'shish
     const params = new URLSearchParams();
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/day/break_time/${id}/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
-    
     const response = await this.request<BreakTime>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ Tanaffus vaqti muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li tanaffus vaqtini yangilashda xatolik:`, error);
@@ -833,7 +761,6 @@ async updateBreakTime(id: number, data: UpdateBreakTimeRequest): Promise<BreakTi
 
 // Tanaffus vaqtini o'chirish
 async deleteBreakTime(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li tanaffus vaqtini o'chirish...`);
   
   try {
     // user_id parametrini URL ga qo'shish
@@ -841,13 +768,11 @@ async deleteBreakTime(id: number): Promise<void> {
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/day/break_time/${id}/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     await this.request<void>(endpoint, {
       method: 'DELETE',
     });
     
-    console.log('✅ Tanaffus vaqti muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li tanaffus vaqtini o\'chirishda xatolik:`, error);
     throw error;
@@ -925,7 +850,6 @@ calculateBreakDuration(startTime: string, endTime: string): string {
 
 // WorkDay methods
 async getWorkDays(userId?: number): Promise<WorkDay[]> {
-  console.log('📅 WorkDay ro\'yxatini olish...');
   
   try {
     const params = new URLSearchParams();
@@ -933,17 +857,14 @@ async getWorkDays(userId?: number): Promise<WorkDay[]> {
     // SUPERADMIN UCHUN: Agar boshqa adminning workdaylarini ko'rish uchun
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin ${userId} foydalanuvchisining workdaylarini olish`);
     } else {
       // Oddiy admin yoki o'z workdaylari uchun
       params.append('user_id', this.USER_ID.toString());
     }
     
     const endpoint = `/day/work_day/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<WorkDay[]>(endpoint);
-    console.log(`✅ ${response.length} ta workday yuklandi`);
     return response;
   } catch (error) {
     console.error('❌ WorkDay ro\'yxatini yuklashda xatolik:', error);
@@ -952,7 +873,6 @@ async getWorkDays(userId?: number): Promise<WorkDay[]> {
 }
 
 async createWorkDay(data: CreateWorkDayRequest): Promise<WorkDay> {
-  console.log('➕ Yangi WorkDay yaratish...');
   
   try {
     const workDayData: any = {
@@ -966,13 +886,9 @@ async createWorkDay(data: CreateWorkDayRequest): Promise<WorkDay> {
     // Agar superadmin boshqa foydalanuvchiga workday biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
       params.append('user_id', data.user.toString());
-      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga workday biriktirilmoqda`);
     } else {
       params.append('user_id', this.USER_ID.toString());
     }
-    
-    console.log('📦 WorkDay ma\'lumotlari:', workDayData);
-    console.log('🔗 Query parametrlar:', params.toString());
     
     const endpoint = `/day/work_day/?${params.toString()}`;
     const response = await this.request<WorkDay>(endpoint, {
@@ -980,7 +896,6 @@ async createWorkDay(data: CreateWorkDayRequest): Promise<WorkDay> {
       body: JSON.stringify(workDayData),
     });
     
-    console.log('✅ WorkDay muvaffaqiyatli yaratildi');
     return response;
   } catch (error) {
     console.error('❌ WorkDay yaratishda xatolik:', error);
@@ -989,7 +904,6 @@ async createWorkDay(data: CreateWorkDayRequest): Promise<WorkDay> {
 }
 
 async updateWorkDay(id: number, data: UpdateWorkDayRequest): Promise<WorkDay> {
-  console.log(`✏️ ${id} ID-li WorkDay ni yangilash...`);
   
   try {
     const updateData: any = {};
@@ -1007,14 +921,12 @@ async updateWorkDay(id: number, data: UpdateWorkDayRequest): Promise<WorkDay> {
     }
     
     const endpoint = `/day/work_day/${id}/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<WorkDay>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ WorkDay muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li WorkDay ni yangilashda xatolik:`, error);
@@ -1023,7 +935,6 @@ async updateWorkDay(id: number, data: UpdateWorkDayRequest): Promise<WorkDay> {
 }
 
 async deleteWorkDay(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li WorkDay ni o'chirish...`);
   
   try {
     const params = new URLSearchParams();
@@ -1034,7 +945,6 @@ async deleteWorkDay(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ WorkDay muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li WorkDay ni o\'chirishda xatolik:`, error);
     throw error;
@@ -1043,23 +953,19 @@ async deleteWorkDay(id: number): Promise<void> {
 
 // DayOff methods (same structure, different endpoint)
 async getDayOffs(userId?: number): Promise<DayOff[]> {
-  console.log('🏖️ DayOff ro\'yxatini olish...');
   
   try {
     const params = new URLSearchParams();
     
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin ${userId} foydalanuvchisining dayofflarini olish`);
     } else {
       params.append('user_id', this.USER_ID.toString());
     }
     
     const endpoint = `/day/day_off/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<DayOff[]>(endpoint);
-    console.log(`✅ ${response.length} ta dayoff yuklandi`);
     return response;
   } catch (error) {
     console.error('❌ DayOff ro\'yxatini yuklashda xatolik:', error);
@@ -1068,7 +974,6 @@ async getDayOffs(userId?: number): Promise<DayOff[]> {
 }
 
 async createDayOff(data: CreateDayOffRequest): Promise<DayOff> {
-  console.log('➕ Yangi DayOff yaratish...');
   
   try {
     const dayOffData: any = {
@@ -1080,12 +985,9 @@ async createDayOff(data: CreateDayOffRequest): Promise<DayOff> {
     
     if (data.user && data.user !== this.USER_ID) {
       params.append('user_id', data.user.toString());
-      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga dayoff biriktirilmoqda`);
     } else {
       params.append('user_id', this.USER_ID.toString());
     }
-    
-    console.log('📦 DayOff ma\'lumotlari:', dayOffData);
     
     const endpoint = `/day/day_off/?${params.toString()}`;
     const response = await this.request<DayOff>(endpoint, {
@@ -1093,7 +995,6 @@ async createDayOff(data: CreateDayOffRequest): Promise<DayOff> {
       body: JSON.stringify(dayOffData),
     });
     
-    console.log('✅ DayOff muvaffaqiyatli yaratildi');
     return response;
   } catch (error) {
     console.error('❌ DayOff yaratishda xatolik:', error);
@@ -1102,7 +1003,6 @@ async createDayOff(data: CreateDayOffRequest): Promise<DayOff> {
 }
 
 async updateDayOff(id: number, data: UpdateDayOffRequest): Promise<DayOff> {
-  console.log(`✏️ ${id} ID-li DayOff ni yangilash...`);
   
   try {
     const updateData: any = {};
@@ -1124,7 +1024,6 @@ async updateDayOff(id: number, data: UpdateDayOffRequest): Promise<DayOff> {
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ DayOff muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li DayOff ni yangilashda xatolik:`, error);
@@ -1133,7 +1032,6 @@ async updateDayOff(id: number, data: UpdateDayOffRequest): Promise<DayOff> {
 }
 
 async deleteDayOff(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li DayOff ni o'chirish...`);
   
   try {
     const params = new URLSearchParams();
@@ -1144,7 +1042,6 @@ async deleteDayOff(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ DayOff muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li DayOff ni o\'chirishda xatolik:`, error);
     throw error;
@@ -1234,7 +1131,6 @@ formatWorkDays(days: string[]): string {
 }
 // Update the getShifts method - FIXED URL
 async getShifts(userId?: number): Promise<Shift[]> {
-  console.log('🔄 Smenalarni olish...');
   
   try {
     const params = new URLSearchParams();
@@ -1243,7 +1139,6 @@ async getShifts(userId?: number): Promise<Shift[]> {
     // Agar superadmin boshqa foydalanuvchi smenalarini ko'rmoqchi bo'lsa
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin ${userId} foydalanuvchisining smenalarini olish`);
     } else {
       // Oddiy admin yoki o'z smenalari uchun
       params.append('user_id', this.USER_ID.toString());
@@ -1251,10 +1146,8 @@ async getShifts(userId?: number): Promise<Shift[]> {
     
     // FIX: Use the correct endpoint with user_id parameter
     const endpoint = `/day/shift/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<Shift[]>(endpoint);
-    console.log(`✅ ${response.length} ta smena yuklandi`);
     
     // Format the response to include break_time field
     if (response && Array.isArray(response)) {
@@ -1286,14 +1179,12 @@ async getShifts(userId?: number): Promise<Shift[]> {
     }
     
     // Demo/fallback uchun
-    console.log('🔄 Mock smena ma\'lumotlari ishlatilmoqda');
     return this.getShifts();
   }
 }
 
 // Update createShift method to include user_id in URL
 async createShift(data: CreateShiftRequest): Promise<Shift> {
-  console.log('➕ Yangi smena yaratish...');
   
   try {
     // API ga yuboriladigan ma'lumotlar
@@ -1314,14 +1205,10 @@ async createShift(data: CreateShiftRequest): Promise<Shift> {
     // Agar superadmin boshqa foydalanuvchiga smena biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
       params.append('user_id', data.user.toString());
-      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga smena biriktirilmoqda`);
     } else {
       // Oddiy admin yoki o'z smenalari uchun
       params.append('user_id', this.USER_ID.toString());
     }
-    
-    console.log('📦 Smena ma\'lumotlari:', shiftData);
-    console.log('🔗 Query parametrlar:', params.toString());
     
     const endpoint = `/day/shift/?${params.toString()}`;
     const response = await this.request<Shift>(endpoint, {
@@ -1329,7 +1216,6 @@ async createShift(data: CreateShiftRequest): Promise<Shift> {
       body: JSON.stringify(shiftData),
     });
     
-    console.log('✅ Smena muvaffaqiyatli yaratildi:', response);
     return response;
   } catch (error) {
     console.error('❌ Smena yaratishda xatolik:', error);
@@ -1354,7 +1240,6 @@ async createShift(data: CreateShiftRequest): Promise<Shift> {
 
 // Update updateShift method to include user_id in URL
 async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
-  console.log(`✏️ ${id} ID-li smenani yangilash...`);
   
   try {
     // Yangilash uchun tayyor ma'lumot
@@ -1364,8 +1249,6 @@ async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
     if (data.start_time !== undefined) updateData.start_time = data.start_time;
     if (data.end_time !== undefined) updateData.end_time = data.end_time;
     if (data.break_time !== undefined) updateData.break_time = data.break_time;
-    
-    console.log('📦 Yangilash ma\'lumotlari:', updateData);
     
     // user_id ni query parametr sifatida yuborish
     const params = new URLSearchParams();
@@ -1379,14 +1262,12 @@ async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
     }
     
     const endpoint = `/day/shift/${id}/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<Shift>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ Smena muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li smenani yangilashda xatolik:`, error);
@@ -1397,7 +1278,6 @@ async updateShift(id: number, data: UpdateShiftRequest): Promise<Shift> {
 
 // Smenani o'chirish
 async deleteShift(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li smenani o'chirish...`);
   
   try {
     // O'chirish uchun user_id bilan so'rov yuborish
@@ -1409,7 +1289,6 @@ async deleteShift(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ Smena muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li smenani o\'chirishda xatolik:`, error);
     throw error;
@@ -1419,31 +1298,25 @@ async deleteShift(id: number): Promise<void> {
 
 // Barcha Telegram kanallarini olish
 async getTelegramChannels(userId?: number): Promise<TelegramChannel[]> {
-  console.log('📢 Telegram kanallarini olish...');
-  
   try {
     const params = new URLSearchParams();
     
     // Agar user_id berilgan bo'lsa (superadmin boshqa adminning kanallarini so'rash)
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin ${userId} foydalanuvchisining Telegram kanallarini olish`);
     } else {
       // Oddiy admin yoki o'z kanallari uchun
       params.append('user_id', this.USER_ID.toString());
     }
     
     const endpoint = `/utils/telegramchannel/${params.toString() ? '?' + params.toString() : ''}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<TelegramChannel[]>(endpoint);
-    console.log(`✅ ${response.length} ta Telegram kanali yuklandi`);
     return response;
   } catch (error) {
     console.error('❌ Telegram kanallarini yuklashda xatolik:', error);
     
     // Demo/fallback uchun
-    console.log('🔄 Mock Telegram kanallari ma\'lumotlari ishlatilmoqda');
     return this.getMockTelegramChannels();
   }
 }
@@ -1451,7 +1324,6 @@ async getTelegramChannels(userId?: number): Promise<TelegramChannel[]> {
 
 // Barcha filiallarni olish
 async getBranches(userId?: number): Promise<Branch[]> {
-  console.log('🏢 Filiallarni olish...');
   
   try {
     const params = new URLSearchParams();
@@ -1459,30 +1331,24 @@ async getBranches(userId?: number): Promise<Branch[]> {
     // SUPERADMIN UCHUN: Agar boshqa adminning filiallarini ko'rish uchun user_id berilsa
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin ${userId} foydalanuvchisining filiallarini olish`);
     } else {
       // Oddiy admin yoki o'z filiallari uchun
       params.append('user_id', this.USER_ID.toString());
     }
     
     const endpoint = `/utils/branch/${params.toString() ? '?' + params.toString() : ''}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
-    
     const response = await this.request<Branch[]>(endpoint);
-    console.log(`✅ ${response.length} ta filial yuklandi`);
     return response;
   } catch (error) {
     console.error('❌ Filiallarni yuklashda xatolik:', error);
     
     // Demo/fallback uchun
-    console.log('🔄 Mock filial ma\'lumotlari ishlatilmoqda');
     return this.getMockBranches();
   }
 }
 
 // Yangi filial yaratish
 async createBranch(data: CreateBranchRequest): Promise<Branch> {
-  console.log('➕ Yangi filial yaratish...');
   
   try {
     const branchData: any = {
@@ -1492,13 +1358,11 @@ async createBranch(data: CreateBranchRequest): Promise<Branch> {
     // Agar superadmin boshqa foydalanuvchiga filial biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
       branchData.user_id = data.user;
-      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga filial biriktirilmoqda`);
     } else {
       // Oddiy admin uchun o'ziga biriktirish
       branchData.user_id = this.USER_ID;
     }
     
-    console.log('📦 Filial ma\'lumotlari:', branchData);
     
     const endpoint = `/utils/branch/`;
     const response = await this.request<Branch>(endpoint, {
@@ -1506,7 +1370,6 @@ async createBranch(data: CreateBranchRequest): Promise<Branch> {
       body: JSON.stringify(branchData),
     });
     
-    console.log('✅ Filial muvaffaqiyatli yaratildi');
     return response;
   } catch (error) {
     console.error('❌ Filial yaratishda xatolik:', error);
@@ -1515,7 +1378,6 @@ async createBranch(data: CreateBranchRequest): Promise<Branch> {
 }
 
 async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
-  console.log(`✏️ ${id} ID-li filialni yangilash...`);
   
   try {
     // Yangilash uchun tayyor ma'lumot
@@ -1531,21 +1393,18 @@ async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
       updateData.user_id = this.USER_ID;
     }
     
-    console.log('📦 Yangilash ma\'lumotlari:', updateData);
     
     // FIX: Add user_id parameter to the URL
     const params = new URLSearchParams();
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/utils/branch/${id}/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     const response = await this.request<Branch>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ Filial muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li filialni yangilashda xatolik:`, error);
@@ -1555,7 +1414,6 @@ async updateBranch(id: number, data: UpdateBranchRequest): Promise<Branch> {
 
 // Filialni o'chirish - FIXED: Add user_id parameter to URL
 async deleteBranch(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li filialni o'chirish...`);
   
   try {
     // FIX: Add user_id parameter to the URL
@@ -1563,13 +1421,11 @@ async deleteBranch(id: number): Promise<void> {
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/utils/branch/${id}/?${params.toString()}`;
-    console.log('🌐 So\'rov manzili:', endpoint);
     
     await this.request<void>(endpoint, {
       method: 'DELETE',
     });
     
-    console.log('✅ Filial muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li filialni o\'chirishda xatolik:`, error);
     throw error;
@@ -1601,7 +1457,6 @@ private getMockBranches(): Branch[] {
 }
 // Yangi Telegram kanali yaratish
 async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<TelegramChannel> {
-  console.log('➕ Yangi Telegram kanali yaratish...');
   
   try {
     const channelData: any = {
@@ -1618,10 +1473,8 @@ async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<Telegra
     // Agar superadmin boshqa foydalanuvchiga kanal biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
       channelData.user_id = data.user;
-      console.log(`👑 Superadmin ${data.user} foydalanuvchisiga Telegram kanali biriktirilmoqda`);
     }
     
-    console.log('📦 Telegram kanali ma\'lumotlari:', channelData);
     
     const endpoint = `/utils/telegramchannel/`;
     const response = await this.request<TelegramChannel>(endpoint, {
@@ -1629,7 +1482,6 @@ async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<Telegra
       body: JSON.stringify(channelData),
     });
     
-    console.log('✅ Telegram kanali muvaffaqiyatli yaratildi');
     return response;
   } catch (error) {
     console.error('❌ Telegram kanali yaratishda xatolik:', error);
@@ -1639,7 +1491,6 @@ async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<Telegra
 
 // Telegram kanalini yangilash
 async updateTelegramChannel(id: number, data: UpdateTelegramChannelRequest): Promise<TelegramChannel> {
-  console.log(`✏️ ${id} ID-li Telegram kanalini yangilash...`);
   
   try {
     // Yangilash uchun tayyor ma'lumot
@@ -1656,15 +1507,12 @@ async updateTelegramChannel(id: number, data: UpdateTelegramChannelRequest): Pro
       updateData.user_id = data.user;
     }
     
-    console.log('📦 Telegram kanalini yangilash ma\'lumotlari:', updateData);
-    
     const endpoint = `/utils/telegramchannel/${id}/`;
     const response = await this.request<TelegramChannel>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
-    console.log('✅ Telegram kanali muvaffaqiyatli yangilandi');
     return response;
   } catch (error) {
     console.error(`❌ ${id} ID-li Telegram kanalini yangilashda xatolik:`, error);
@@ -1674,7 +1522,6 @@ async updateTelegramChannel(id: number, data: UpdateTelegramChannelRequest): Pro
 
 // Telegram kanalini o'chirish
 async deleteTelegramChannel(id: number): Promise<void> {
-  console.log(`🗑️ ${id} ID-li Telegram kanalini o'chirish...`);
   
   try {
     // O'chirish uchun user_id bilan so'rov yuborish
@@ -1686,7 +1533,6 @@ async deleteTelegramChannel(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ Telegram kanali muvaffaqiyatli o\'chirildi');
   } catch (error) {
     console.error(`❌ ${id} ID-li Telegram kanalini o\'chirishda xatolik:`, error);
     throw error;
@@ -1769,7 +1615,6 @@ async getEmployeeHistoryRange(
   startDate: string, 
   endDate: string
 ): Promise<EmployeeHistory[]> {
-  console.log(`📅 Fetching employee ${employeeId} history from ${startDate} to ${endDate}...`);
   
   try {
     // Build query parameters
@@ -1780,10 +1625,8 @@ async getEmployeeHistoryRange(
     params.append('user_id', this.USER_ID.toString());
     
     const endpoint = `/person/employee-history/?${params.toString()}`;
-    console.log('🌐 Making request to:', endpoint);
     
     const response = await this.request<EmployeeHistory[]>(endpoint);
-    console.log(`✅ Loaded ${response.length} history records`);
     
     return response;
   } catch (error) {
@@ -1799,19 +1642,16 @@ async getEmployeeHistoryToday(employeeId: number): Promise<EmployeeHistory[]> {
 }
 // Updated syncEvents method - NO date parameters in URL
 async syncEvents(): Promise<EventSyncResponse> {
-  console.log('🔄 Syncing events from devices...');
   
   try {
     // Send POST request WITHOUT any date parameters
     const endpoint = `/event/events-sync/?user_id=${this.USER_ID}`;
-    console.log('🌐 Making sync request to:', endpoint);
     
     const response = await this.request<any>(endpoint, {
       method: 'POST',
       body: JSON.stringify({}), // Empty body
     });
     
-    console.log('✅ Events sync API response:', response);
     
     // Format response to match EventSyncResponse interface
     return {
@@ -1847,11 +1687,9 @@ async syncEvents(): Promise<EventSyncResponse> {
 }
   // Send phone WITH +998 prefix
   private formatPhoneForServer(phone: string): string {
-    console.log('📱 Formatting phone for server. Original:', phone);
     
     // Remove all non-digits
     let cleanPhone = phone.replace(/\D/g, '');
-    console.log('Cleaned digits:', cleanPhone);
     
     // Add + prefix and ensure it has 998
     let formattedPhone = cleanPhone;
@@ -1864,7 +1702,6 @@ async syncEvents(): Promise<EventSyncResponse> {
     // Add + prefix
     formattedPhone = '+' + formattedPhone;
     
-    console.log('Formatted with + prefix:', formattedPhone);
     
     return formattedPhone; // WITH +998 prefix
   }
@@ -1887,11 +1724,7 @@ async syncEvents(): Promise<EventSyncResponse> {
     }
 
     try {
-      console.log('🌐 API Request:', {
-        endpoint,
-        method: options.method || 'GET',
-        headers: { ...headers, Authorization: token ? 'Bearer ***' : 'None' }
-      });
+      
 
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
@@ -1906,12 +1739,6 @@ async syncEvents(): Promise<EventSyncResponse> {
       } catch {
         data = { raw: responseText };
       }
-
-      console.log('📨 API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data
-      });
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
@@ -1942,7 +1769,6 @@ async syncEvents(): Promise<EventSyncResponse> {
 
 // Get all devices (for superadmin) or user's own devices (for regular admin)
 async getDevices(userId?: number): Promise<Device[]> {
-  console.log('📱 Fetching devices...');
   
   try {
     const params = new URLSearchParams();
@@ -1950,12 +1776,10 @@ async getDevices(userId?: number): Promise<Device[]> {
     // If user_id is provided (superadmin querying another admin's devices)
     if (userId && userId !== this.USER_ID) {
       params.append('user_id', userId.toString());
-      console.log(`👑 Superadmin fetching devices for user ${userId}`);
     }
     // Regular admin - no user_id param, will get their own devices automatically
     
     const endpoint = `/utils/devices/${params.toString() ? '?' + params.toString() : ''}`;
-    console.log('🌐 Making request to:', endpoint);
     
     const response = await this.request<DeviceResponse | Device[]>(endpoint);
     
@@ -1970,25 +1794,21 @@ async getDevices(userId?: number): Promise<Device[]> {
       devices = [];
     }
     
-    console.log(`✅ Loaded ${devices.length} devices`);
     return devices;
   } catch (error) {
     console.error('❌ Failed to load devices:', error);
     
     // For demo/fallback purposes
-    console.log('🔄 Using mock devices data');
     return this.getMockDevices();
   }
 }
 
 // Get single device by ID
 async getDeviceById(id: number): Promise<Device> {
-  console.log(`📱 Fetching device ${id}...`);
   
   try {
     const endpoint = `/utils/devices/${id}/`;
     const device = await this.request<Device>(endpoint);
-    console.log('✅ Device loaded:', device.name);
     return device;
   } catch (error) {
     console.error(`❌ Failed to load device ${id}:`, error);
@@ -2008,7 +1828,6 @@ async createDevice(data: {
   location?: string;
   user?: number; // Only for superadmin to assign to specific user
 }): Promise<Device> {
-  console.log('➕ Creating new device...');
   
   try {
     const deviceData: any = {
@@ -2029,15 +1848,12 @@ async createDevice(data: {
       deviceData.user = data.user;
     }
     
-    console.log('📦 Creating device with data:', { ...deviceData, password: '***' });
-    
     const endpoint = `/utils/devices/`;
     const response = await this.request<Device>(endpoint, {
       method: 'POST',
       body: JSON.stringify(deviceData),
     });
     
-    console.log('✅ Device created successfully');
     return response;
   } catch (error) {
     console.error('❌ Failed to create device:', error);
@@ -2057,7 +1873,6 @@ async updateDevice(id: number, data: Partial<{
   location?: string;
   status?: 'active' | 'inactive' | 'error';
 }>): Promise<Device> {
-  console.log(`✏️ Updating device ${id}...`);
   
   try {
     const endpoint = `/utils/devices/${id}/`;
@@ -2066,7 +1881,6 @@ async updateDevice(id: number, data: Partial<{
       body: JSON.stringify(data),
     });
     
-    console.log('✅ Device updated successfully');
     return response;
   } catch (error) {
     console.error(`❌ Failed to update device ${id}:`, error);
@@ -2076,7 +1890,6 @@ async updateDevice(id: number, data: Partial<{
 
 // Delete device
 async deleteDevice(id: number): Promise<void> {
-  console.log(`🗑️ Deleting device ${id}...`);
   
   try {
     const endpoint = `/utils/devices/${id}/`;
@@ -2084,7 +1897,6 @@ async deleteDevice(id: number): Promise<void> {
       method: 'DELETE',
     });
     
-    console.log('✅ Device deleted');
   } catch (error) {
     console.error(`❌ Failed to delete device ${id}:`, error);
     throw error;
@@ -2145,11 +1957,7 @@ private getMockDevices(): Device[] {
       
       // Format phone: ensure it has +998 prefix
       const serverPhone = this.formatPhoneForServer(credentials.phone_number);
-      console.log('📞 Phone processing:', {
-        original: credentials.phone_number,
-        forServer: serverPhone,
-        note: 'Sending WITH +998 prefix'
-      });
+      
 
       // Create payload
       const payload = {
@@ -2157,7 +1965,6 @@ private getMockDevices(): Device[] {
         password: credentials.password
       };
 
-      console.log('📦 Sending payload:', { ...payload, password: '***' });
 
       // Make the request
       const response = await fetch(`${BASE_URL}/user/login/`, {
@@ -2170,7 +1977,6 @@ private getMockDevices(): Device[] {
       });
 
       const responseText = await response.text();
-      console.log('📄 Raw response:', responseText);
 
       let data: any;
       try {
@@ -2179,7 +1985,6 @@ private getMockDevices(): Device[] {
         data = { raw: responseText };
       }
 
-      console.log('📊 Parsed response:', data);
 
       if (!response.ok) {
         console.error('❌ Login failed:', {
@@ -2208,17 +2013,14 @@ private getMockDevices(): Device[] {
         // Format: { success: true, message: "...", data: { access: "token" } }
         accessToken = data.data.access;
         refreshToken = data.data.refresh;
-        console.log('✅ Found token in data.data.access:', accessToken?.substring(0, 20) + '...');
       } else if (data.access) {
         // Format: { access: "token", refresh: "token" }
         accessToken = data.access;
         refreshToken = data.refresh;
-        console.log('✅ Found token in data.access:', accessToken?.substring(0, 20) + '...');
       } else if (data.token) {
         // Format: { token: "jwt" }
         accessToken = data.token;
         refreshToken = data.refresh_token;
-        console.log('✅ Found token in data.token:', accessToken?.substring(0, 20) + '...');
       }
 
       if (!accessToken) {
@@ -2229,9 +2031,6 @@ private getMockDevices(): Device[] {
       // Store tokens
       this.setTokens(accessToken, refreshToken);
       
-      console.log('✅ Login successful! Token stored');
-      console.log('🔑 Access token length:', accessToken.length);
-      console.log('🔄 Refresh token:', refreshToken ? 'Received' : 'Missing');
       console.groupEnd();
 
       return {
@@ -2272,12 +2071,6 @@ private getMockDevices(): Device[] {
     // Add + prefix
     const phoneWithPlus = '+' + cleanPhone;
     
-    console.log('Test details:', {
-      originalPhone: phone,
-      sendingToServer: phoneWithPlus,
-      passwordLength: password.length
-    });
-    
     try {
       const response = await fetch(`${BASE_URL}/user/login/`, {
         method: 'POST',
@@ -2304,7 +2097,6 @@ private getMockDevices(): Device[] {
         note: 'Phone sent WITH +998 prefix'
       };
       
-      console.log('Result:', result);
       console.groupEnd();
       return result;
     } catch (error) {
@@ -2322,7 +2114,6 @@ private getMockDevices(): Device[] {
     }
 
     try {
-      console.log('🔄 Refreshing token...');
       
       const response = await this.request<RefreshTokenResponse>('/user/auth/refresh/', {
         method: 'POST',
@@ -2343,10 +2134,8 @@ private getMockDevices(): Device[] {
   }
 
   async getCurrentUser(): Promise<User> {
-    console.log('👤 Fetching current user...');
     try {
       const user = await this.request<User>('/user/me/');
-      console.log('✅ User loaded:', user.full_name);
       return user;
     } catch (error) {
       console.error('❌ Failed to load user:', error);
@@ -2356,16 +2145,12 @@ private getMockDevices(): Device[] {
 
   // NEW: Get employee by ID with user_id=2
   async getEmployeeById(id: number): Promise<Employee> {
-    console.log(`👤 Fetching employee with ID: ${id}`);
     
     try {
       // Add user_id parameter like your other endpoints
       const endpoint = `/person/employee-detail/${id}/?user_id=${this.USER_ID}`;
-      console.log('🌐 Making request to:', endpoint);
       
       const employee = await this.request<Employee>(endpoint);
-      console.log('✅ Employee loaded:', employee.name);
-      console.log('📊 Full employee data:', employee);
       return employee;
     } catch (error) {
       console.error(`❌ Failed to load employee ${id}:`, error);
@@ -2383,11 +2168,9 @@ private getMockDevices(): Device[] {
 
   // NEW: Search employees with user_id=2
   async searchEmployees(query: string): Promise<Employee[]> {
-    console.log(`🔍 Searching employees with query: ${query}`);
     try {
       const endpoint = `/person/search/?q=${encodeURIComponent(query)}&user_id=${this.USER_ID}`;
       const employees = await this.request<Employee[]>(endpoint);
-      console.log(`✅ Found ${employees.length} employees`);
       return employees;
     } catch (error) {
       console.error('❌ Search failed:', error);
@@ -2397,12 +2180,10 @@ private getMockDevices(): Device[] {
 
   // NEW: Get employees with pagination and user_id=2
   async getEmployeesPaginated(page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<Employee>> {
-    console.log(`📄 Fetching employees page ${page}, size ${pageSize}`);
     
     try {
       const endpoint = `/person/sync-employees/?page=${page}&page_size=${pageSize}&user_id=${this.USER_ID}`;
       const response = await this.request<PaginatedResponse<Employee>>(endpoint);
-      console.log(`✅ Loaded ${response.results.length} employees, total: ${response.count}`);
       return response;
     } catch (error) {
       console.error('❌ Failed to load paginated employees:', error);
@@ -2418,19 +2199,16 @@ private getMockDevices(): Device[] {
     deleted: number;
     message?: string;
   }> {
-    console.log('🔄 Syncing employees with devices...');
     
     try {
       // Send POST request to sync endpoint with user_id parameter
       const endpoint = `/person/sync-employees/?user_id=${this.USER_ID}`;
-      console.log('🌐 Making sync request to:', endpoint);
       
       const response = await this.request<any>(endpoint, {
         method: 'POST',
         body: JSON.stringify({}), // Empty body, user_id is in query params
       });
       
-      console.log('✅ Employees synced successfully:', response);
       return response;
     } catch (error) {
       console.error('❌ Failed to sync employees:', error);
@@ -2440,23 +2218,18 @@ private getMockDevices(): Device[] {
 
   // Get all employees with user_id=2
   async getEmployees(): Promise<Employee[]> {
-    console.log('👥 Fetching all employees...');
-    console.log('👤 Using user_id:', this.USER_ID);
     
     try {
       const endpoint = `/person/employees/?user_id=${this.USER_ID}`;
-      console.log('🌐 Making request to:', endpoint);
       
       const response = await this.request<any>(endpoint);
       
       // Check if the response has an "employees" array
       if (response.employees && Array.isArray(response.employees)) {
-        console.log(`✅ Loaded ${response.employees.length} employees`);
         return response.employees as Employee[];
       } 
       // If the response itself is an array (fallback)
       else if (Array.isArray(response)) {
-        console.log(`✅ Loaded ${response.length} employees (direct array)`);
         return response as Employee[];
       } 
       // Otherwise, return empty array
@@ -2471,10 +2244,6 @@ private getMockDevices(): Device[] {
   }
 
   async createEmployee(data: CreateEmployeeRequest): Promise<Employee> {
-    console.log('➕ Creating new employee...');
-    
-    // 🔍 DEBUG: Log incoming data
-    console.log('📥 Incoming data to createEmployee:', data);
     
     // Prepare the data - ALWAYS include required fields
     const employeeData: any = {
@@ -2499,55 +2268,46 @@ private getMockDevices(): Device[] {
     // ✅ Handle foreign key fields: only send if they're valid IDs (> 0)
     // For null/undefined/0, don't include them (backend should handle as null)
     if (data.department !== undefined && data.department !== null && data.department > 0) {
-      console.log(`✅ Including department: ${data.department}`);
       employeeData.department = data.department;
     } else {
       console.log(`❌ Skipping department (value: ${data.department})`);
     }
     
     if (data.shift !== undefined && data.shift !== null && data.shift > 0) {
-      console.log(`✅ Including shift: ${data.shift}`);
       employeeData.shift = data.shift;
     } else {
       console.log(`❌ Skipping shift (value: ${data.shift})`);
     }
     
     if (data.branch !== undefined && data.branch !== null && data.branch > 0) {
-      console.log(`✅ Including branch: ${data.branch}`);
       employeeData.branch = data.branch;
     } else {
       console.log(`❌ Skipping branch (value: ${data.branch})`);
     }
     
     if (data.break_time !== undefined && data.break_time !== null && data.break_time > 0) {
-      console.log(`✅ Including break_time: ${data.break_time}`);
       employeeData.break_time = data.break_time;
     } else {
       console.log(`❌ Skipping break_time (value: ${data.break_time})`);
     }
     
     if (data.work_day !== undefined && data.work_day !== null && data.work_day > 0) {
-      console.log(`✅ Including work_day: ${data.work_day}`);
       employeeData.work_day = data.work_day;
     } else {
       console.log(`❌ Skipping work_day (value: ${data.work_day})`);
     }
     
     if (data.day_off !== undefined && data.day_off !== null && data.day_off > 0) {
-      console.log(`✅ Including day_off: ${data.day_off}`);
       employeeData.day_off = data.day_off;
     } else {
       console.log(`❌ Skipping day_off (value: ${data.day_off})`);
     }
-    
-    console.log('📦 FINAL - Sending CREATE employee data:', employeeData);
     
     try {
       const response = await this.request<Employee>('/person/create/', {
         method: 'POST',
         body: JSON.stringify(employeeData),
       });
-      console.log('✅ Employee created successfully:', response);
       return response;
     } catch (error) {
       console.error('❌ Failed to create employee:', error);
@@ -2557,7 +2317,6 @@ private getMockDevices(): Device[] {
   }
 
   async updateEmployee(id: number, data: Partial<CreateEmployeeRequest>): Promise<Employee> {
-    console.log(`✏️ Updating employee ${id}...`);
     
     const employeeData: any = {
       user_id: this.USER_ID
@@ -2607,14 +2366,12 @@ private getMockDevices(): Device[] {
       employeeData.day_off = data.day_off;
     }
     
-    console.log(`📦 Updating employee ${id} with data:`, employeeData);
     
     try {
       const employee = await this.request<Employee>(`/person/update/${id}/`, {
         method: 'PUT',
         body: JSON.stringify(employeeData),
       });
-      console.log('✅ Employee updated:', employee);
       return employee;
     } catch (error) {
       console.error(`❌ Failed to update employee ${id}:`, error);
@@ -2624,14 +2381,12 @@ private getMockDevices(): Device[] {
 
   // Delete employee with user_id=2 in query parameter
   async deleteEmployee(id: number): Promise<void> {
-    console.log(`🗑️ Deleting employee ${id}...`);
     
     try {
       const endpoint = `/person/delete/${id}/?user_id=${this.USER_ID}`;
       await this.request<void>(endpoint, {
         method: 'DELETE',
       });
-      console.log('✅ Employee deleted');
     } catch (error) {
       console.error(`❌ Failed to delete employee ${id}:`, error);
       throw error;
@@ -2640,8 +2395,6 @@ private getMockDevices(): Device[] {
 
   // NEW: Get daily attendance list
   async getDailyAttendance(date?: string): Promise<DailyAttendance> {
-    console.log('📊 Fetching daily attendance...');
-    
     try {
       // Format date if provided, otherwise use current date
       let selectedDate: string;
@@ -2653,18 +2406,14 @@ private getMockDevices(): Device[] {
       
       // user_id bilan so'rov yuborish
       const endpoint = `/person/daily-list/?date=${selectedDate}&user_id=${this.USER_ID}`;
-      console.log('🌐 Making request to:', endpoint);
       
       const response = await this.request<DailyAttendance>(endpoint);
-      console.log('✅ Daily attendance loaded');
-      console.log('📈 Stats:', response.stats);
       
       return response;
     } catch (error) {
       console.error('❌ Failed to load daily attendance:', error);
       
       // Agar API xato bersa, mock ma'lumotlarni qaytaring
-      console.log('🔄 Using mock data for daily attendance');
       
       return {
         date: date || formatDate(new Date()),

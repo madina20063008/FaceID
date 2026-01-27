@@ -1,9 +1,5 @@
-
 import { useState, useEffect } from "react";
-import {
-  apiService,
-  mockEmployees,
-} from "../lib/api";
+import { apiService, mockEmployees } from "../lib/api";
 import {
   Employee,
   CreateEmployeeRequest,
@@ -75,7 +71,7 @@ export function EmployeesPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
   const [isViewLoading, setIsViewLoading] = useState(false);
-  
+
   // NEW STATE: For selectors
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [workDays, setWorkDays] = useState<WorkDay[]>([]);
@@ -108,41 +104,36 @@ export function EmployeesPage() {
   // Fetch all selectors (shifts, work_days, day_offs)
   const fetchSelectors = async () => {
     if (useMockData) return;
-    
+
     try {
       setIsLoadingSelectors(true);
-      console.log("🔄 Fetching selectors...");
-      
+
       // Fetch shifts
       try {
         const shiftsData = await apiService.getShifts();
         setShifts(shiftsData);
-        console.log(`✅ Loaded ${shiftsData.length} shifts`);
       } catch (shiftError) {
         console.error("Failed to fetch shifts:", shiftError);
         setShifts([]);
       }
-      
+
       // Fetch work days
       try {
         const workDaysData = await apiService.getWorkDays();
         setWorkDays(workDaysData);
-        console.log(`✅ Loaded ${workDaysData.length} work days`);
       } catch (workDayError) {
         console.error("Failed to fetch work days:", workDayError);
         setWorkDays([]);
       }
-      
+
       // Fetch day offs
       try {
         const dayOffsData = await apiService.getDayOffs();
         setDayOffs(dayOffsData);
-        console.log(`✅ Loaded ${dayOffsData.length} day offs`);
       } catch (dayOffError) {
         console.error("Failed to fetch day offs:", dayOffError);
         setDayOffs([]);
       }
-      
     } catch (error) {
       console.error("Error fetching selectors:", error);
     } finally {
@@ -151,29 +142,27 @@ export function EmployeesPage() {
   };
 
   const filteredEmployees = Array.isArray(employees)
-  ? employees
-      .filter(
-        (emp) =>
-          emp?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          emp?.employee_no
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          emp?.position?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      // ✅ SORT A → Z by name
-      .sort((a, b) =>
-        (a.name || "").localeCompare(b.name || "", "uz", {
-          sensitivity: "base",
-        })
-      )
-  : [];
-
+    ? employees
+        .filter(
+          (emp) =>
+            emp?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            emp?.employee_no
+              ?.toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            emp?.position?.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        // ✅ SORT A → Z by name
+        .sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", "uz", {
+            sensitivity: "base",
+          }),
+        )
+    : [];
 
   // Fetch all employees
   const fetchEmployees = async () => {
     try {
       setIsLoading(true);
-      console.log("🔄 Fetching employees...");
 
       try {
         const employeesData = await apiService.getEmployees();
@@ -186,7 +175,7 @@ export function EmployeesPage() {
           setEmployees(mockEmployees);
           setUseMockData(true);
           toast.warning(
-            "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda."
+            "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda.",
           );
         }
       } catch (apiError) {
@@ -194,7 +183,7 @@ export function EmployeesPage() {
         setEmployees(mockEmployees);
         setUseMockData(true);
         toast.warning(
-          "API ga ulanib bo'lmadi. Namuna ma'lumotlar ishlatilmoqda."
+          "API ga ulanib bo'lmadi. Namuna ma'lumotlar ishlatilmoqda.",
         );
       }
     } catch (error) {
@@ -211,7 +200,6 @@ export function EmployeesPage() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      console.log("🔄 Starting refresh process...");
 
       if (useMockData) {
         // In mock mode, just fetch employees
@@ -219,11 +207,8 @@ export function EmployeesPage() {
         toast.success("Hodimlar ro'yxati yangilandi (namuna rejim)");
       } else {
         try {
-          console.log("🔄 Syncing employees with devices...");
-
           // Step 1: Sync employees with devices
           const syncResult = await apiService.syncEmployees();
-          console.log("✅ Sync result:", syncResult);
 
           if (syncResult.success) {
             let successMessage = `Hodimlar sinxronizatsiya qilindi`;
@@ -235,7 +220,7 @@ export function EmployeesPage() {
             }
             if (syncResult.added > 0) {
               statsMessages.push(
-                `${syncResult.added} ta yangi hodim qo'shildi`
+                `${syncResult.added} ta yangi hodim qo'shildi`,
               );
             }
             if (syncResult.deleted > 0) {
@@ -249,22 +234,20 @@ export function EmployeesPage() {
             toast.success(successMessage);
           } else {
             toast.warning(
-              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas"
+              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
             );
           }
 
           // Step 2: Fetch updated employees list
-          console.log("📥 Fetching updated employees list...");
           await fetchEmployees();
         } catch (syncError: any) {
           console.error("❌ Sync failed:", syncError);
 
           // Try to fetch employees even if sync fails
-          console.log("🔄 Attempting to fetch employees without sync...");
           try {
             await fetchEmployees();
             toast.warning(
-              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi"
+              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi",
             );
           } catch (fetchError) {
             toast.error("Ikkala operatsiya ham amalga oshirilmadi");
@@ -351,22 +334,6 @@ export function EmployeesPage() {
           // ❌ DO NOT include employee_no - API will generate it
         };
 
-        // 🔍 DEBUG: Log what we're sending
-        console.log("🔍 DEBUG - Creating employee with data:", {
-          position: employeeData.position,
-          phone_number: employeeData.phone_number,
-          salary: employeeData.salary,
-          description: employeeData.description,
-          department: employeeData.department,
-          shift: employeeData.shift,
-          work_day: employeeData.work_day,
-          day_off: employeeData.day_off,
-          branch: employeeData.branch,
-          fullData: employeeData,
-        });
-
-        console.log("➕ Creating employee (NO employee_no):", employeeData);
-
         try {
           await apiService.createEmployee(employeeData);
           toast.success("Hodim muvaffaqiyatli qo'shildi");
@@ -382,12 +349,12 @@ export function EmployeesPage() {
             toast.error(`Xato: Noto'g'ri ID (${apiError.message})`);
           } else if (apiError.status === 400) {
             toast.error(
-              "Noto'g'ri ma'lumotlar. Barcha majburiy maydonlarni to'ldiring."
+              "Noto'g'ri ma'lumotlar. Barcha majburiy maydonlarni to'ldiring.",
             );
           } else {
             toast.error(
               "Hodim qo'shishda xatolik: " +
-                (apiError.message || "Noma'lum xatolik")
+                (apiError.message || "Noma'lum xatolik"),
             );
           }
           throw apiError;
@@ -436,8 +403,8 @@ export function EmployeesPage() {
                   work_day: formData.work_day,
                   day_off: formData.day_off,
                 }
-              : emp
-          )
+              : emp,
+          ),
         );
         toast.success("Hodim yangilandi (namuna rejim)");
       } else {
@@ -464,10 +431,6 @@ export function EmployeesPage() {
           // ❌ DO NOT include employee_no in updates
         };
 
-        console.log(
-          `✏️ Updating employee ${editEmployee.id} (NO employee_no):`,
-          updateData
-        );
         await apiService.updateEmployee(editEmployee.id, updateData);
         toast.success("Hodim ma'lumotlari yangilandi");
       }
@@ -478,7 +441,7 @@ export function EmployeesPage() {
     } catch (error: any) {
       console.error("Failed to update employee:", error);
       toast.error(
-        "Yangilashda xatolik: " + (error.message || "Noma'lum xatolik")
+        "Yangilashda xatolik: " + (error.message || "Noma'lum xatolik"),
       );
     }
   };
@@ -493,7 +456,6 @@ export function EmployeesPage() {
         setEmployees(employees.filter((emp) => emp.id !== deleteEmployee.id));
         toast.success("Hodim o'chirildi (namuna rejim)");
       } else {
-        console.log(`🗑️ Deleting employee ${deleteEmployee.id}...`);
         await apiService.deleteEmployee(deleteEmployee.id);
         toast.success("Hodim o'chirildi");
       }
@@ -503,16 +465,13 @@ export function EmployeesPage() {
     } catch (error: any) {
       console.error("Failed to delete employee:", error);
       toast.error(
-        "O'chirishda xatolik: " + (error.message || "Noma'lum xatolik")
+        "O'chirishda xatolik: " + (error.message || "Noma'lum xatolik"),
       );
     }
   };
 
   // Open edit dialog
   const openEdit = (employee: Employee) => {
-    console.log("🔧 openEdit function called");
-    console.log("👤 Employee object received:", employee);
-
     try {
       setEditEmployee(employee);
 
@@ -539,24 +498,6 @@ export function EmployeesPage() {
       };
 
       setFormData(editFormData);
-
-      // 🔍 DEBUG: Log what we're loading for edit
-      console.log("🔍 DEBUG - Loading employee for edit:", {
-        name: employee.name,
-        position: employee.position,
-        salary: employee.salary,
-        description: employee.description,
-        department: employee.department,
-        shift: employee.shift,
-        work_day: employee.work_day,
-        day_off: employee.day_off,
-        branch: employee.branch,
-        id: employee.id,
-        employee_no: employee.employee_no, // Still show in console but not in form
-      });
-
-      console.log("📋 Form data set to:", editFormData);
-      console.log("✅ Edit dialog should open now");
     } catch (error) {
       console.error("❌ Error in openEdit:", error);
     }
@@ -565,24 +506,19 @@ export function EmployeesPage() {
   // Open view dialog
   const openView = async (employee: Employee) => {
     try {
-      console.log("👁️ Opening view for employee ID:", employee.id);
-      
       setIsViewLoading(true); // Set loading to true
       setViewEmployee(employee);
-      
+
       if (useMockData) {
         // Use existing data for mock mode
-        console.log("📊 Using mock data for view");
         setIsViewLoading(false);
       } else {
         // Fetch detailed employee data from API
-        console.log(`📡 Fetching detailed data for employee ${employee.id}`);
-        
+
         try {
           const detailedEmployee = await apiService.getEmployeeById(
-            employee.id
+            employee.id,
           );
-          console.log("✅ Detailed employee data loaded");
           setViewEmployee(detailedEmployee);
         } catch (error: any) {
           console.error("❌ Failed to fetch employee details:", error);
@@ -657,7 +593,7 @@ export function EmployeesPage() {
   // Helper function to get selector display name
   const getSelectorName = (id: number | null, list: any[]): string => {
     if (!id) return "Tanlanmagan";
-    const item = list.find(item => item.id === id);
+    const item = list.find((item) => item.id === id);
     return item ? item.name : `ID: ${id}`;
   };
 
@@ -815,11 +751,6 @@ export function EmployeesPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              console.log(
-                                "✏️ Edit button clicked for employee:",
-                                employee.name,
-                                employee.id
-                              );
                               openEdit(employee);
                             }}
                             title="Tahrirlash"
@@ -911,18 +842,19 @@ export function EmployeesPage() {
               <Input
                 id="salary"
                 type="number"
-                value={formData.salary}
-                onChange={(e) =>
+                value={formData.salary === 0 ? "" : formData.salary}
+                onChange={(e) => {
+                  const value = e.target.value;
                   setFormData({
                     ...formData,
-                    salary: parseInt(e.target.value) || 0,
-                  })
-                }
+                    salary: value === "" ? 0 : Number(value),
+                  });
+                }}
                 placeholder="3000000"
                 min="0"
               />
             </div>
-            
+
             {/* NEW: Shift selector */}
             <div className="space-y-2">
               <Label htmlFor="shift">Smena</Label>
@@ -949,7 +881,7 @@ export function EmployeesPage() {
                 )}
               </select>
             </div>
-            
+
             {/* NEW: Work Day selector */}
             <div className="space-y-2">
               <Label htmlFor="work_day">Ish kunlari</Label>
@@ -976,7 +908,7 @@ export function EmployeesPage() {
                 )}
               </select>
             </div>
-            
+
             {/* NEW: Day Off selector */}
             <div className="space-y-2">
               <Label htmlFor="day_off">Dam olish kunlari</Label>
@@ -1003,7 +935,7 @@ export function EmployeesPage() {
                 )}
               </select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="description">Izoh</Label>
               <Input
@@ -1045,11 +977,13 @@ export function EmployeesPage() {
           <DialogHeader>
             <DialogTitle>Hodim ma'lumotlari</DialogTitle>
           </DialogHeader>
-          
+
           {isViewLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-gray-500">Hodim ma'lumotlari yuklanmoqda...</p>
+              <p className="mt-2 text-gray-500">
+                Hodim ma'lumotlari yuklanmoqda...
+              </p>
             </div>
           ) : viewEmployee ? (
             <div className="space-y-4">
@@ -1112,7 +1046,7 @@ export function EmployeesPage() {
                     {formatCurrency(viewEmployee.salary)}
                   </p>
                 </div>
-                
+
                 {/* NEW: Show selector information */}
                 {viewEmployee.shift && (
                   <div>
@@ -1124,7 +1058,7 @@ export function EmployeesPage() {
                     </p>
                   </div>
                 )}
-                
+
                 {viewEmployee.work_day && (
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1135,7 +1069,7 @@ export function EmployeesPage() {
                     </p>
                   </div>
                 )}
-                
+
                 {viewEmployee.day_off && (
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1146,7 +1080,7 @@ export function EmployeesPage() {
                     </p>
                   </div>
                 )}
-                
+
                 <div className="col-span-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Izoh
@@ -1162,7 +1096,7 @@ export function EmployeesPage() {
                     </p>
                     <p className="font-medium">
                       {new Date(viewEmployee.created_at).toLocaleDateString(
-                        "uz-UZ"
+                        "uz-UZ",
                       )}
                     </p>
                   </div>

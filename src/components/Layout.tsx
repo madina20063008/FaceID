@@ -4,14 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "next-themes";
 import { Button } from "../app/components/ui/button";
 import { Avatar, AvatarFallback } from "../app/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../app/components/ui/dropdown-menu";
+
 import {
   LayoutDashboard,
   Users,
@@ -30,29 +23,35 @@ import {
   CalendarDays,
   SquareChartGantt,
   Bell,
-  UserRoundX,
   BarChart3,
 } from "lucide-react";
 import { apiService } from "../lib/api";
-// Import qilish
-import { Notification } from "../lib/types";
 
+// Types
 interface LayoutProps {
   children: ReactNode;
 }
 
-// Agar hali ham muammo bo'lsa, type yaratamiz
-type AppNotification = Notification;
+interface Notification {
+  id: number;
+  user: number;
+  text: string;
+  created_at: string;
+  is_read: boolean;
+}
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // State uchun aniq type
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // User dropdown state
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const navigation = [
     { name: "Bosh sahifa", href: "/dashboard", icon: LayoutDashboard },
@@ -75,45 +74,48 @@ export function Layout({ children }: LayoutProps) {
     loadNotifications();
   }, []);
 
-  // Close notification dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Close notification dropdown
       if (
         notificationRef.current &&
         !notificationRef.current.contains(event.target as Node)
       ) {
         setNotificationOpen(false);
       }
+
+      // Close user dropdown
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
     };
 
-    if (notificationOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [notificationOpen]);
+  }, []);
 
   const loadNotifications = async () => {
     try {
       const response = await apiService.getNotifications();
-
-      // Response'ni qayta ishlash
       const notificationsData = (response as any).map((item: any) => ({
         id: item.id,
         user: item.user,
         text: item.text,
         created_at: item.created_at,
         is_read: item.is_read || false,
-      })) as AppNotification[];
+      })) as Notification[];
 
       console.log("📥 Loaded notifications:", notificationsData);
       setNotifications(notificationsData);
     } catch (error) {
       console.error("Failed to load notifications:", error);
-      // Mock data for testing
-      const mockData: AppNotification[] = [
+      const mockData: Notification[] = [
         {
           id: 1,
           user: 123,
@@ -192,7 +194,7 @@ export function Layout({ children }: LayoutProps) {
             })}
           </nav>
 
-          {/* User info */}
+          {/* User info in sidebar */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3 text-sm">
               <Avatar className="h-10 w-10">
@@ -205,15 +207,11 @@ export function Layout({ children }: LayoutProps) {
                   {user?.full_name || "Foydalanuvchi"}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {
-                      user?.role === "s"
-                        ? "Superadmin"
-                        : user?.role === "a"
-                          ? "Admin"
-                          : "Admin" // default
-                    }
-                  </p>
+                  {user?.role === "s"
+                    ? "Superadmin"
+                    : user?.role === "a"
+                    ? "Admin"
+                    : "Admin"}
                 </p>
               </div>
             </div>
@@ -242,7 +240,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex-1" />
 
             <div className="flex items-center gap-2">
-              {/* Custom Notification Dropdown */}
+              {/* Notification Dropdown */}
               <div className="relative" ref={notificationRef}>
                 <Button
                   variant="ghost"
@@ -264,7 +262,7 @@ export function Layout({ children }: LayoutProps) {
                   )}
                 </Button>
 
-                {/* Dropdown panel - Responsive for mobile */}
+                {/* Dropdown panel */}
                 {notificationOpen && (
                   <div className="fixed inset-0 lg:absolute lg:inset-auto lg:right-0 lg:mt-2 lg:w-96 w-full lg:max-h-[80vh] h-[25vh] lg:h-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 lg:rounded-lg shadow-lg z-50 overflow-y-auto">
                     {/* Header with close button - visible on mobile */}
@@ -334,8 +332,6 @@ export function Layout({ children }: LayoutProps) {
                                   "Clicked notification:",
                                   notification,
                                 );
-                                // Handle notification click
-                                // On mobile, you might want to close after clicking
                                 if (window.innerWidth < 1024) {
                                   setNotificationOpen(false);
                                 }
@@ -373,6 +369,7 @@ export function Layout({ children }: LayoutProps) {
                 )}
               </div>
 
+              {/* Theme Toggle */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -382,38 +379,52 @@ export function Layout({ children }: LayoutProps) {
                 <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               </Button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-9 w-9 rounded-full"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-blue-600 text-white">
-                        {user?.full_name?.charAt(0) || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Mening hisobim</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer">
+              {/* User Dropdown - Custom Implementation (More reliable) */}
+              <div className="relative" ref={userMenuRef}>
+                <Button
+                  variant="ghost"
+                  className="relative h-9 w-9 rounded-full p-0"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-blue-600 text-white select-none">
+                      {user?.full_name?.charAt(0) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                    <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        Mening hisobim
+                      </p>
+                    </div>
+                    
+                    <Link
+                      to="/profile"
+                      className="flex items-center px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
                       <User className="mr-2 h-4 w-4" />
                       Profil
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={logout}
-                    className="cursor-pointer text-red-600"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Chiqish
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    
+                    <div className="border-t border-gray-200 dark:border-gray-700" />
+                    
+                    <button
+                      onClick={() => {
+                        logout();
+                        setUserMenuOpen(false);
+                      }}
+                      className="flex w-full items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Chiqish
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>

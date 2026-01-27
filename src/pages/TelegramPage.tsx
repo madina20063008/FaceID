@@ -93,7 +93,6 @@ const TelegramChannelPage = () => {
       formattedData.user = newChannel.user;
     }
     
-    console.log('📤 Telegram kanali yaratish ma\'lumotlari:', formattedData);
     
     try {
       await apiService.createTelegramChannel(formattedData);
@@ -153,8 +152,6 @@ const TelegramChannelPage = () => {
         setShowEditChannel(null);
         return;
       }
-      
-      console.log('✏️ Telegram kanalini yangilash ma\'lumotlari:', updateData);
       
       await apiService.updateTelegramChannel(showEditChannel.id, updateData);
       

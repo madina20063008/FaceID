@@ -22,19 +22,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       const token = apiService.getAccessToken();
-      console.log('🔄 Auth initialization - Token exists:', !!token);
       
       if (token) {
         try {
           const currentUser = await apiService.getCurrentUser();
           setUser(currentUser);
-          console.log('✅ User loaded:', currentUser.full_name);
           
           if (window.location.pathname === '/login') {
             navigate('/dashboard');
           }
         } catch (error: any) {
-          console.error('❌ Failed to load user:', error);
           apiService.clearTokens();
           
           if (window.location.pathname !== '/login') {
@@ -52,26 +49,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: LoginRequest) => {
     setIsLoading(true);
     try {
-      console.log('🚀 Login attempt for phone:', credentials.phone_number);
       
       const response: LoginResponse = await apiService.login(credentials);
       
-      console.log('✅ Login API success, fetching user...');
       
       try {
         const currentUser = await apiService.getCurrentUser();
         setUser(currentUser);
-        console.log('👤 User data loaded:', currentUser.full_name);
         toast.success('Muvaffaqiyatli kirdingiz!');
         navigate('/dashboard');
       } catch (userError) {
-        console.error('⚠️ User fetch failed but login succeeded');
         // Still redirect since we have token
         toast.success('Kirish muvaffaqiyatli!');
         navigate('/dashboard');
       }
     } catch (error: any) {
-      console.error('💥 Login failed:', error);
       
       // Show appropriate error message
       if (error.message.includes('Telefon raqami yoki parol')) {
@@ -89,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    console.log('👋 Logging out');
     apiService.clearTokens();
     setUser(null);
     toast.success('Tizimdan chiqdingiz');

@@ -1,5 +1,5 @@
-// pages/LoginPage.tsx - COMPLETE CORRECTED VERSION
-import { useState } from "react";
+// pages/LoginPage.tsx - COMPLETE CORRECTED VERSION with Rate Limiting
+import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../app/components/ui/button";
 import { Input } from "../app/components/ui/input";
@@ -17,9 +17,8 @@ import {
   Sun,
   AlertCircle,
   Loader2,
-  Info,
-  Bug,
-  TestTube,
+  ShieldAlert,
+  Timer,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { testLogin, testSuperAdmin } from "../lib/api";
@@ -30,26 +29,157 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const [attemptCount, setAttemptCount] = useState(0);
   const { login } = useAuth();
   const { theme, setTheme } = useTheme();
+
+  // Retry after rate limiting timer
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (isRateLimited && remainingTime !== null && remainingTime > 0) {
+      timer = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(timer);
+            setIsRateLimited(false);
+            setAttemptCount(0);
+            localStorage.removeItem("login_attempts");
+            localStorage.removeItem("login_attempt_time");
+            setError(""); // Clear error when timer finishes
+
+            setPhoneNumber("");
+            setPassword("");
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isRateLimited, remainingTime]);
+  // Load attempt count from localStorage on mount
+  useState(() => {
+    const savedAttempts = localStorage.getItem("login_attempts");
+    const savedTime = localStorage.getItem("login_attempt_time");
+
+    if (savedAttempts && savedTime) {
+      const attemptTime = parseInt(savedTime);
+      const now = Date.now();
+      const timeDiff = Math.floor((now - attemptTime) / 1000); // seconds
+
+      // Reset if more than 1 minute has passed
+      if (timeDiff > 60) {
+        localStorage.removeItem("login_attempts");
+        localStorage.removeItem("login_attempt_time");
+      } else {
+        setAttemptCount(parseInt(savedAttempts));
+
+        // Check if rate limited
+        if (parseInt(savedAttempts) >= 7) {
+          setIsRateLimited(true);
+          const remaining = 60 - timeDiff;
+          setRemainingTime(remaining > 0 ? remaining : 0);
+        }
+      }
+    }
+  });
+
+  // Timer for rate limiting
+  useState(() => {
+    if (isRateLimited && remainingTime !== null && remainingTime > 0) {
+      const timer = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev === null || prev <= 1) {
+            clearInterval(timer);
+            setIsRateLimited(false);
+            setAttemptCount(0);
+            localStorage.removeItem("login_attempts");
+            localStorage.removeItem("login_attempt_time");
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  });
+
+  const trackLoginAttempt = (increment = true) => {
+    const now = Date.now();
+    const savedAttempts = localStorage.getItem("login_attempts");
+    const savedTime = localStorage.getItem("login_attempt_time");
+
+    let currentAttempts = 0;
+
+    if (savedAttempts && savedTime) {
+      const attemptTime = parseInt(savedTime);
+      const timeDiff = Math.floor((now - attemptTime) / 1000);
+
+      // Reset if more than 1 minute has passed
+      if (timeDiff > 60) {
+        localStorage.removeItem("login_attempts");
+        localStorage.removeItem("login_attempt_time");
+        currentAttempts = 0;
+      } else {
+        currentAttempts = parseInt(savedAttempts);
+      }
+    }
+
+    if (increment) {
+      currentAttempts++;
+    }
+
+    localStorage.setItem("login_attempts", currentAttempts.toString());
+    localStorage.setItem("login_attempt_time", now.toString());
+
+    setAttemptCount(currentAttempts);
+
+    // Check rate limiting
+    if (currentAttempts >= 7) {
+      setIsRateLimited(true);
+      setRemainingTime(60);
+      setError("Juda ko'p urinishlar! Iltimos 1 daqiqa kutib turing.");
+      return true;
+    }
+
+    return false;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setTestResult(null);
-    setIsSubmitting(true);
+
+    // Check rate limiting first
+    if (isRateLimited) {
+      setError(
+        `Juda ko'p urinishlar! Iltimos ${remainingTime} soniya kutib turing.`,
+      );
+      return;
+    }
+
+    // Track attempt BEFORE checking validation
+    const isLimited = trackLoginAttempt();
+    if (isLimited) return;
 
     if (!phoneNumber.trim()) {
       setError("Iltimos, telefon raqamini kiriting");
-      setIsSubmitting(false);
       return;
     }
 
     if (!password.trim()) {
       setError("Iltimos, parolni kiriting");
-      setIsSubmitting(false);
       return;
     }
+
+    setIsSubmitting(true);
 
     // Clean phone number - remove all non-digits
     const cleanedPhoneNumber = phoneNumber.replace(/\D/g, "");
@@ -73,8 +203,25 @@ export function LoginPage() {
         phone_number: cleanedPhoneNumber,
         password,
       });
+
+      // Reset attempt count on successful login
+      localStorage.removeItem("login_attempts");
+      localStorage.removeItem("login_attempt_time");
+      setAttemptCount(0);
     } catch (err: any) {
-      setError(err.message || "Kirishda xatolik yuz berdi");
+      // Handle rate limiting error
+      if (err.response?.status === 429) {
+        setIsRateLimited(true);
+        setRemainingTime(60);
+        setError("Juda ko'p urinishlar! Iltimos 1 daqiqa kutib turing.");
+
+        // Force max attempts in localStorage
+        localStorage.setItem("login_attempts", "7");
+        localStorage.setItem("login_attempt_time", Date.now().toString());
+        setAttemptCount(7);
+      } else {
+        setError(err.message || "Kirishda xatolik yuz berdi");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -82,6 +229,9 @@ export function LoginPage() {
 
   const handleTest = async () => {
     if (!phoneNumber.trim() || !password.trim()) return;
+
+    const isLimited = trackLoginAttempt();
+    if (isLimited) return;
 
     setIsSubmitting(true);
     try {
@@ -95,6 +245,9 @@ export function LoginPage() {
   };
 
   const handleSuperAdminTest = async () => {
+    const isLimited = trackLoginAttempt();
+    if (isLimited) return;
+
     setIsSubmitting(true);
     try {
       const result = await testSuperAdmin();
@@ -111,6 +264,9 @@ export function LoginPage() {
   const handleManualTest = async () => {
     if (!phoneNumber.trim() || !password.trim()) return;
 
+    const isLimited = trackLoginAttempt();
+    if (isLimited) return;
+
     setIsSubmitting(true);
     try {
       // Test with 998 prefix
@@ -118,8 +274,6 @@ export function LoginPage() {
       const phoneWith998 = cleanPhone.startsWith("998")
         ? cleanPhone
         : "998" + cleanPhone;
-
-      console.log("🧪 Manual test - Sending WITH 998 prefix:", phoneWith998);
 
       const response = await fetch("https://hikvision.ugku.uz/user/login/", {
         method: "POST",
@@ -185,6 +339,16 @@ export function LoginPage() {
     }
   };
 
+  // Clear rate limiting manually
+  const clearRateLimit = () => {
+    setIsRateLimited(false);
+    setRemainingTime(null);
+    setAttemptCount(0);
+    localStorage.removeItem("login_attempts");
+    localStorage.removeItem("login_attempt_time");
+    setError("");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <div className="absolute top-4 right-4 flex gap-2">
@@ -192,7 +356,7 @@ export function LoginPage() {
           variant="outline"
           size="icon"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isRateLimited}
         >
           <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -213,9 +377,25 @@ export function LoginPage() {
         </CardHeader>
 
         <CardContent>
-          
+          {/* Rate Limiting Warning */}
+          {isRateLimited && (
+            <div className="mb-4 p-2 bg-red-50 border border-red-200 dark:bg-amber-900/20 dark:border-amber-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-red-800 dark:text-red-300 mb-1">
+                    Juda ko'p urinish!
+                  </h4>
+                  <p className="text-sm text-red-700 dark:text-red-400 mb-2">
+                    Keyinroq urinib ko'ring!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {error && (
+          {/* General Error */}
+          {error && !isRateLimited && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400 rounded-md flex items-center gap-2">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
               <span className="text-sm">{error}</span>
@@ -237,7 +417,7 @@ export function LoginPage() {
                 value={phoneNumber}
                 onChange={handlePhoneNumberChange}
                 required
-                disabled={isSubmitting}
+                disabled={isSubmitting || isRateLimited}
                 className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
                 autoComplete="tel"
               />
@@ -260,24 +440,36 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isSubmitting}
+                disabled={isSubmitting || isRateLimited}
                 className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
                 autoComplete="current-password"
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={
+                isSubmitting ||
+                (isRateLimited && remainingTime !== null && remainingTime > 0)
+              }
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Kirilmoqda...
                 </>
+              ) : isRateLimited &&
+                remainingTime !== null &&
+                remainingTime > 0 ? (
+                <>
+                  <Timer className="mr-2 h-4 w-4" />
+                  Kutish ({remainingTime}s)
+                </>
               ) : (
                 "Kirish"
               )}
             </Button>
-
-            
 
             {testResult && (
               <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">

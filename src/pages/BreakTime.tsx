@@ -192,7 +192,6 @@ const getBreakTimeName = (startTime: string, endTime: string) => {
       formattedData.user = newBreakTime.user;
     }
 
-    console.log("📤 Tanaffus vaqti yaratish ma'lumotlari:", formattedData);
 
     try {
       await apiService.createBreakTime(formattedData);
@@ -271,7 +270,6 @@ const getBreakTimeName = (startTime: string, endTime: string) => {
         return;
       }
 
-      console.log("✏️ Tanaffus vaqtini yangilash ma'lumotlari:", updateData);
 
       await apiService.updateBreakTime(showEditBreakTime.id, updateData);
 

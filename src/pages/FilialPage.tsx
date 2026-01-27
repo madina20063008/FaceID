@@ -87,7 +87,6 @@ const FilialPage = () => {
       formattedData.user = newBranch.user;
     }
     
-    console.log('📤 Filial yaratish ma\'lumotlari:', formattedData);
     
     try {
       await apiService.createBranch(formattedData);
@@ -136,8 +135,6 @@ const FilialPage = () => {
         setShowEditBranch(null);
         return;
       }
-      
-      console.log('✏️ Filialni yangilash ma\'lumotlari:', updateData);
       
       await apiService.updateBranch(showEditBranch.id, updateData);
       

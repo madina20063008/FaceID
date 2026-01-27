@@ -95,29 +95,10 @@ export function DashboardPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<string>("all"); // 'all', 'kirish', 'chiqish'
 
-  // Debug: Check employee data structure
-  useEffect(() => {
-    if (attendance && attendance.employees.length > 0) {
-      console.log("🔍 Employee data structure check:");
-      console.log("First employee:", attendance.employees[0]);
-      console.log(
-        "All employee IDs:",
-        attendance.employees.map((emp) => ({
-          id: emp.id,
-          employee_no: emp.employee_no,
-          name: emp.name,
-          hasId: !!emp.id,
-          hasEmployeeNo: !!emp.employee_no,
-        })),
-      );
-    }
-  }, [attendance]);
-
   // Load attendance data
   const loadAttendance = async (date?: string) => {
     try {
       setIsLoading(true);
-      console.log("📊 Loading attendance for date:", date || selectedDate);
 
       const dateToLoad = date || selectedDate;
 
@@ -154,9 +135,6 @@ export function DashboardPage() {
 
   const loadEmployeeHistory = async (employee: any) => {
     try {
-      console.log("🔍 Starting to load employee history...");
-      console.log("📋 Employee object received:", employee);
-
       // ✅ Use employee.employee_id (this is 9 in your data)
       const employeeId = employee?.employee_id;
 
@@ -168,29 +146,17 @@ export function DashboardPage() {
         return;
       }
 
-      console.log("✅ Valid employee ID found:", {
-        employee_id: employeeId,
-        name: employee.name,
-        employee_no: employee.employee_no,
-        type: typeof employeeId,
-      });
-
       setIsLoadingHistory(true);
       setSelectedEmployeeId(employeeId);
       setSelectedEmployeeName(employee.name || "Noma'lum hodim");
       setSelectedEmployeeNo(employee.employee_no || "");
       setShowHistoryModal(true);
 
-      console.log(
-        `📅 Loading history for employee ID ${employeeId} on ${selectedDate}`,
-      );
-
       // Call the API with employee.employee_id (e.g., 9)
       const history = await apiService.getEmployeeHistory(
         selectedDate,
         employeeId,
       );
-      console.log("📊 Employee history API response:", history);
 
       setEmployeeHistory(history);
 
@@ -223,51 +189,20 @@ export function DashboardPage() {
       setIsLoadingHistory(false);
     }
   };
-
-  const testEmployeeHistoryAPI = async () => {
-    const testDate = selectedDate;
-    // Use employee_id from your data
-    const testEmployeeId = attendance?.employees[0]?.employee_id || 9;
-    const testEmployeeName = attendance?.employees[0]?.name || "Islom";
-
-    console.log("🧪 Testing employee history API...");
-    console.log("📅 Test date:", testDate);
-    console.log("👤 Test employee:", {
-      employee_id: testEmployeeId,
-      name: testEmployeeName,
-    });
-
-    try {
-      const response = await fetch(
-        `https://hikvision.ugku.uz/person/employee-history/?date=${testDate}&employee_id=${testEmployeeId}&user_id=2`,
-        {
-          headers: {
-            Authorization: `Bearer ${apiService.getAccessToken()}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        },
-      );
-
-      console.log("🔧 Raw API response status:", response.status);
-      const text = await response.text();
-      console.log("🔧 Raw API response text:", text);
-
-      if (response.ok) {
-        const data = JSON.parse(text);
-        console.log("✅ API test successful:", data);
-        toast.success(
-          `${testEmployeeName} uchun ${data.length} ta tadbir topildi`,
-        );
-      } else {
-        console.error("❌ API error:", response.status, text);
-        toast.error(`API xatosi: ${response.status}`);
-      }
-    } catch (error) {
-      console.error("❌ API test failed:", error);
-      toast.error("API test amalga oshirilmadi");
+  useEffect(() => {
+    if (showHistoryModal) {
+      // 🔒 Lock background scroll
+      document.body.style.overflow = "hidden";
+    } else {
+      // 🔓 Restore scroll
+      document.body.style.overflow = "";
     }
-  };
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showHistoryModal]);
 
   // Close history modal
   const closeHistoryModal = () => {
@@ -367,7 +302,6 @@ export function DashboardPage() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      console.log("🔄 Starting refresh process...");
 
       if (useMockData) {
         // In mock mode, just fetch attendance
@@ -375,11 +309,8 @@ export function DashboardPage() {
         toast.success("Davomat ma'lumotlari yangilandi (namuna rejim)");
       } else {
         try {
-          console.log("🔄 Syncing events with devices...");
-
           // Step 1: Sync events with devices
           const syncResult = await apiService.syncEvents();
-          console.log("✅ Sync result:", syncResult);
 
           if (syncResult.success) {
             let successMessage = `Tadbirlar sinxronizatsiya qilindi`;
@@ -405,13 +336,11 @@ export function DashboardPage() {
           }
 
           // Step 2: Fetch updated attendance list
-          console.log("📥 Fetching updated attendance data...");
           await loadAttendance(selectedDate);
         } catch (syncError: any) {
           console.error("❌ Sync failed:", syncError);
 
           // Try to fetch attendance even if sync fails
-          console.log("🔄 Attempting to fetch attendance without sync...");
           try {
             await loadAttendance(selectedDate);
             toast.warning(
@@ -452,30 +381,33 @@ export function DashboardPage() {
 
   // Filter employees based on status
   const getFilteredEmployees = () => {
-  if (!attendance) return [];
+    if (!attendance) return [];
 
-  return attendance.employees
-    .filter((emp) => {
-      const matchesSearch =
-        emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
+    return (
+      attendance.employees
+        .filter((emp) => {
+          const matchesSearch =
+            emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            emp.employee_no.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesStatus = (() => {
-        if (statusFilter === "all") return true;
-        if (statusFilter === "came") return emp.kirish !== null;
-        if (statusFilter === "late") {
-          return emp.late !== "0:00" && emp.late !== "0";
-        }
-        if (statusFilter === "absent") return emp.kirish === null;
-        return true;
-      })();
+          const matchesStatus = (() => {
+            if (statusFilter === "all") return true;
+            if (statusFilter === "came") return emp.kirish !== null;
+            if (statusFilter === "late") {
+              return emp.late !== "0:00" && emp.late !== "0";
+            }
+            if (statusFilter === "absent") return emp.kirish === null;
+            return true;
+          })();
 
-      return matchesSearch && matchesStatus;
-    })
-    // ✅ SORT A → Z by name
-    .sort((a, b) => a.name.localeCompare(b.name, "uz", { sensitivity: "base" }));
-};
-
+          return matchesSearch && matchesStatus;
+        })
+        // ✅ SORT A → Z by name
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, "uz", { sensitivity: "base" }),
+        )
+    );
+  };
 
   const filteredEmployees = getFilteredEmployees();
 
@@ -793,7 +725,6 @@ export function DashboardPage() {
                             </span>
                             <div className="flex gap-2 text-xs text-gray-500">
                               <span>ID: {employee.employee_id}</span>{" "}
-                              
                             </div>
                           </div>
                         </div>
@@ -887,8 +818,7 @@ export function DashboardPage() {
                         </h2>
                         <p className="text-gray-500 flex items-center gap-2 mt-1">
                           <User className="h-4 w-4" />
-                          {selectedEmployeeName} • {selectedEmployeeNo} •{" "}
-                          {selectedDate}
+                          {selectedEmployeeName} • {selectedDate}
                         </p>
                       </div>
                     </div>
