@@ -1,60 +1,14 @@
 import { useState, useEffect } from "react";
 import { apiService, formatDate } from "../lib/api";
 import { DailyAttendance, EmployeeHistory } from "../lib/types";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../app/components/ui/card";
+import { Card,CardContent,CardHeader,CardTitle,} from "../app/components/ui/card";
 import { Input } from "../app/components/ui/input";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "../app/components/ui/avatar";
+import {Avatar,AvatarFallback,AvatarImage,} from "../app/components/ui/avatar";
 import { Badge } from "../app/components/ui/badge";
 import { Button } from "../app/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../app/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../app/components/ui/select";
-import {
-  Users,
-  UserCheck,
-  Clock,
-  UserX,
-  Calendar,
-  Search,
-  RefreshCw,
-  AlertCircle,
-  Database,
-  Download,
-  History,
-  Filter,
-  DoorOpen,
-  DoorClosed,
-  X,
-  Clock4,
-  User,
-  ArrowLeft,
-  Loader2,
-  Eye,
-  CheckCircle,
-  XCircle,
-  Landmark,
-} from "lucide-react";
+import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow,} from "../app/components/ui/table";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "../app/components/ui/select";
+import {Users,UserCheck,Clock,UserX,Calendar,Search,RefreshCw,AlertCircle,Database,History,DoorOpen,DoorClosed,X,Clock4,User,ArrowLeft,Loader2,CheckCircle,XCircle,Landmark,} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
@@ -322,48 +276,58 @@ export function DashboardPage() {
     return { kirish, chiqish, kirishEvents, chiqishEvents };
   };
 
-  // 🔄 REFRESH WITH SYNC FUNCTIONALITY
   const handleRefresh = async () => {
-    try {
-      setIsRefreshing(true);
+  try {
+    // Check if branch is selected
+    const branch = getCurrentBranch();
+    if (!branch) {
+      toast.error("Iltimos, filial tanlang");
+      return;
+    }
 
-      if (useMockData) {
-        // In mock mode, just fetch attendance
-        await loadAttendance(selectedDate);
-        toast.success("Davomat ma'lumotlari yangilandi (namuna rejim)");
-      } else {
-        try {
-          // Step 1: Sync events with devices
-          const syncResult = await apiService.syncEvents();
+    setIsRefreshing(true);
+    setCurrentBranch(branch);
 
-          if (syncResult.success) {
-            let successMessage = `Tadbirlar sinxronizatsiya qilindi`;
+    if (useMockData) {
+      // In mock mode, just fetch attendance
+      await loadAttendance(selectedDate);
+      toast.success("Davomat ma'lumotlari yangilandi (namuna rejim)");
+    } else {
+      try {
+        // Step 1: Sync events with devices
+        const syncResult = await apiService.syncEvents();
 
-            // Add sync statistics to the message
-            const statsMessages = [];
-            if (syncResult.synced_devices > 0) {
-              statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
-            }
-            if (syncResult.synced_events > 0) {
-              statsMessages.push(`${syncResult.synced_events} ta yangi tadbir`);
-            }
+        if (syncResult.success) {
+          let successMessage = `Tadbirlar sinxronizatsiya qilindi`;
 
-            if (statsMessages.length > 0) {
-              successMessage += `: ${statsMessages.join(", ")}`;
-            }
-
-            toast.success(successMessage);
-          } else {
-            toast.warning(
-              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
-            );
+          // Add sync statistics to the message
+          const statsMessages = [];
+          if (syncResult.synced_devices > 0) {
+            statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
+          }
+          if (syncResult.synced_events > 0) {
+            statsMessages.push(`${syncResult.synced_events} ta yangi tadbir`);
           }
 
-          // Step 2: Fetch updated attendance list
-          await loadAttendance(selectedDate);
-        } catch (syncError: any) {
-          console.error("❌ Sync failed:", syncError);
+          if (statsMessages.length > 0) {
+            successMessage += `: ${statsMessages.join(", ")}`;
+          }
 
+          toast.success(successMessage);
+        } else {
+          toast.warning(
+            "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
+          );
+        }
+
+        // Step 2: Fetch updated attendance list
+        await loadAttendance(selectedDate);
+      } catch (syncError: any) {
+        console.error("❌ Sync failed:", syncError);
+        
+        if (syncError.message.includes('Filial tanlanmagan')) {
+          toast.error(syncError.message);
+        } else {
           // Try to fetch attendance even if sync fails
           try {
             await loadAttendance(selectedDate);
@@ -376,23 +340,24 @@ export function DashboardPage() {
           }
         }
       }
-    } catch (error: any) {
-      console.error("❌ Refresh failed:", error);
-
-      // User-friendly error messages
-      if (error.message.includes("Failed to fetch")) {
-        toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
-      } else if (error.status === 401) {
-        toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
-      } else if (error.status === 403) {
-        toast.error("Bu amalni bajarish uchun ruxsat yo'q");
-      } else {
-        toast.error("Yangilashda xatolik yuz berdi");
-      }
-    } finally {
-      setIsRefreshing(false);
     }
-  };
+  } catch (error: any) {
+    console.error("❌ Refresh failed:", error);
+
+    // User-friendly error messages
+    if (error.message.includes("Failed to fetch")) {
+      toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
+    } else if (error.status === 401) {
+      toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
+    } else if (error.status === 403) {
+      toast.error("Bu amalni bajarish uchun ruxsat yo'q");
+    } else {
+      toast.error(error.message || "Yangilashda xatolik yuz berdi");
+    }
+  } finally {
+    setIsRefreshing(false);
+  }
+};
 
   // Date change handler
   const handleDateChange = (date: string) => {

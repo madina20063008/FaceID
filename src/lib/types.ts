@@ -153,6 +153,7 @@ export interface TelegramChannel {
   user: number; // user ID who owns this channel
   created_at?: string;
   updated_at?: string;
+  device?: number;
 }
 
 export interface CreateTelegramChannelRequest {
@@ -160,6 +161,7 @@ export interface CreateTelegramChannelRequest {
   chat_id: string;
   resolved_id?: string; // Optional, ishlatilmasin
   user?: number; // Only for superadmin to assign to specific user
+  device?: number;
 }
 
 export interface UpdateTelegramChannelRequest {
@@ -167,6 +169,7 @@ export interface UpdateTelegramChannelRequest {
   chat_id?: string;
   resolved_id?: string; // Optional, ishlatilmasin
   user?: number;
+  device?: number;
 }
 
 // Add these Branch interfaces near your other interfaces

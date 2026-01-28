@@ -55,6 +55,7 @@ import {
   Pencil,
   Download,
   FileSpreadsheet,
+  Landmark,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -83,6 +84,26 @@ const Absence = () => {
   // Excel download state
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   
+  // Add state for current branch
+  const [currentBranch, setCurrentBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  
+  // Get current branch from localStorage
+  const getCurrentBranch = () => {
+    const savedBranchId = localStorage.getItem('selected_branch_id');
+    const savedBranchName = localStorage.getItem('selected_branch_name');
+    
+    if (savedBranchId && savedBranchName) {
+      return {
+        id: parseInt(savedBranchId),
+        name: savedBranchName
+      };
+    }
+    return null;
+  };
+
   // Months data
   const months = [
     { value: '1', label: 'Yanvar' },
@@ -109,14 +130,44 @@ const Absence = () => {
     { value: 'szk', label: 'Sababsiz kelmadi' },
   ];
 
+  // Listen for branch changes
+  useEffect(() => {
+    const handleBranchChange = () => {
+      const branch = getCurrentBranch();
+      setCurrentBranch(branch);
+      
+      // Reload data for the new branch
+      if (monthlyReport) {
+        loadMonthlyReport();
+      } else {
+        loadAbsentEmployees();
+      }
+    };
+
+    window.addEventListener('branchChanged', handleBranchChange);
+    
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
+  }, [monthlyReport]);
+
   // Load absent employees for selected date
   useEffect(() => {
-    loadAbsentEmployees();
+    // Set current branch on initial load
+    const branch = getCurrentBranch();
+    setCurrentBranch(branch);
+    
+    if (branch) {
+      loadAbsentEmployees();
+    }
   }, [selectedDate]);
 
   // Load employees for filter dropdown
   useEffect(() => {
-    loadEmployees();
+    const branch = getCurrentBranch();
+    if (branch) {
+      loadEmployees();
+    }
   }, []);
 
   const loadAbsentEmployees = async () => {
@@ -124,12 +175,31 @@ const Absence = () => {
       setLoading(true);
       setError(null);
       
+      // Check if branch is selected
+      if (!currentBranch) {
+        const branch = getCurrentBranch();
+        if (!branch) {
+          setError('Iltimos, avval filial tanlang');
+          toast.error('Iltimos, avval filial tanlang');
+          setLoading(false);
+          return;
+        }
+        setCurrentBranch(branch);
+      }
+      
       const data = await apiService.getAbsentEmployees(selectedDate);
       setAbsentData(data);
     } catch (err: any) {
       console.error('Failed to load absent employees:', err);
-      setError(err.message || 'Kelmagan hodimlarni yuklashda xatolik');
-      toast.error('Kelmagan hodimlarni yuklashda xatolik');
+      const errorMessage = err.message || 'Kelmagan hodimlarni yuklashda xatolik';
+      setError(errorMessage);
+      
+      // Clear data if branch not selected
+      if (err.message.includes('Filial tanlanmagan')) {
+        setAbsentData(null);
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -137,7 +207,13 @@ const Absence = () => {
 
   const loadEmployees = async () => {
     try {
-      const data = await apiService.getEmployees();
+      const branch = getCurrentBranch();
+      if (!branch) {
+        setError('Iltimos, avval filial tanlang');
+        return;
+      }
+      
+      const data = await apiService.getEmployees(branch.id);
       setEmployees(data);
     } catch (err) {
       console.error('Failed to load employees:', err);
@@ -147,6 +223,17 @@ const Absence = () => {
 
   const loadMonthlyReport = async () => {
     try {
+      // Check if branch is selected
+      if (!currentBranch) {
+        const branch = getCurrentBranch();
+        if (!branch) {
+          setError('Iltimos, avval filial tanlang');
+          toast.error('Iltimos, avval filial tanlang');
+          return;
+        }
+        setCurrentBranch(branch);
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -161,17 +248,43 @@ const Absence = () => {
       toast.success(`Oylik hisobot yuklandi: ${data.count} ta hodim`);
     } catch (err: any) {
       console.error('Failed to load monthly report:', err);
-      setError(err.message || 'Oylik hisobotni yuklashda xatolik');
-      setMonthlyReport(null);
-      toast.error('Oylik hisobotni yuklashda xatolik');
+      const errorMessage = err.message || 'Oylik hisobotni yuklashda xatolik';
+      setError(errorMessage);
+      
+      // Clear data if branch not selected
+      if (err.message.includes('Filial tanlanmagan')) {
+        setMonthlyReport(null);
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle refresh function
+  const handleRefresh = () => {
+    if (!currentBranch) {
+      toast.error('Iltimos, avval filial tanlang');
+      return;
+    }
+    
+    if (monthlyReport) {
+      loadMonthlyReport();
+    } else {
+      loadAbsentEmployees();
     }
   };
 
   // Kunlik Excel hisobotini yuklash funksiyasi
   const handleDownloadDailyExcel = async () => {
     try {
+      // Check if branch is selected
+      if (!currentBranch) {
+        toast.error('Iltimos, avval filial tanlang');
+        return;
+      }
+
       setDownloadingExcel(true);
       toast.info('Excel hisoboti yuklanmoqda...');
       
@@ -219,6 +332,8 @@ const Absence = () => {
           errorMessage = 'Noto\'g\'ri sana formati. YYYY-MM-DD formatida kiriting';
         } else if (apiError.message?.includes('ruxsat yo\'q')) {
           errorMessage = 'Excel hisobotini olish uchun ruxsat yo\'q';
+        } else if (apiError.message?.includes('Filial tanlanmagan')) {
+          errorMessage = 'Filial tanlanmagan. Iltimos, avval filial tanlang.';
         }
         
         toast.error(errorMessage);
@@ -398,6 +513,12 @@ const Absence = () => {
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
             Kelmagan hodimlar va oylik hisobotlarni boshqarish
+            {!currentBranch && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Filial tanlanmagan
+              </span>
+            )}
           </p>
         </div>
         
@@ -407,8 +528,9 @@ const Absence = () => {
             <Button
               variant="outline"
               onClick={handleDownloadDailyExcel}
-              disabled={downloadingExcel || !absentData || absentData.employees.length === 0}
+              disabled={downloadingExcel || !currentBranch || !absentData || absentData.employees.length === 0}
               className="gap-2"
+              title={!currentBranch ? "Iltimos, filial tanlang" : ""}
             >
               {downloadingExcel ? (
                 <RefreshCw className="h-4 w-4 animate-spin" />
@@ -420,9 +542,10 @@ const Absence = () => {
           )}
           
           <Button
-            onClick={monthlyReport ? loadMonthlyReport : loadAbsentEmployees}
-            disabled={loading || downloadingExcel}
+            onClick={handleRefresh}
+            disabled={loading || downloadingExcel || !currentBranch}
             className="gap-2"
+            title={!currentBranch ? "Iltimos, filial tanlang" : ""}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Yuklanmoqda...' : 'Yangilash'}
@@ -430,8 +553,25 @@ const Absence = () => {
         </div>
       </div>
 
+      {/* Branch Warning */}
+      {!currentBranch && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <Landmark className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="font-medium text-yellow-800 dark:text-yellow-300">
+                Filial tanlanmagan
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                Davomat ma'lumotlarini ko'rish uchun chap panel'dan filial tanlang
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error message */}
-      {error && (
+      {error && !error.includes('Filial tanlanmagan') && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
@@ -446,36 +586,40 @@ const Absence = () => {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex space-x-2">
-          <Button
-            variant="ghost"
-            onClick={() => setMonthlyReport(null)}
-            className={`px-4 py-2 rounded-none border-b-2 ${
-              !monthlyReport 
-                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400' 
-                : 'border-transparent'
-            }`}
-          >
-            Kunlik Kelmaganlar
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={loadMonthlyReport}
-            className={`px-4 py-2 rounded-none border-b-2 ${
-              monthlyReport 
-                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400' 
-                : 'border-transparent'
-            }`}
-          >
-            Oylik Hisobot
-          </Button>
-        </nav>
-      </div>
+      {/* Tabs - Only show if branch is selected */}
+      {currentBranch && (
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex space-x-2">
+            <Button
+              variant="ghost"
+              onClick={() => setMonthlyReport(null)}
+              disabled={!currentBranch}
+              className={`px-4 py-2 rounded-none border-b-2 ${
+                !monthlyReport 
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400' 
+                  : 'border-transparent'
+              }`}
+            >
+              Kunlik Kelmaganlar
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={loadMonthlyReport}
+              disabled={!currentBranch}
+              className={`px-4 py-2 rounded-none border-b-2 ${
+                monthlyReport 
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400' 
+                  : 'border-transparent'
+              }`}
+            >
+              Oylik Hisobot
+            </Button>
+          </nav>
+        </div>
+      )}
 
-      {/* Daily Absent Employees Section */}
-      {!monthlyReport && (
+      {/* Daily Absent Employees Section - Only show if branch is selected */}
+      {!monthlyReport && currentBranch && (
         <Card className="border-gray-200 dark:border-gray-700">
           <CardHeader>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -497,6 +641,7 @@ const Absence = () => {
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-38"
+                  disabled={!currentBranch}
                 />
               </div>
             </div>
@@ -510,8 +655,8 @@ const Absence = () => {
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                   {selectedDate === formatDate(new Date()) 
-                    ? 'Bugun hamma hodimlar ishda'
-                    : 'Tanlangan sana uchun kelmagan hodimlar topilmadi'}
+                    ? "Hali ish vaqti tugamagan kunlik hisobotni ish vaqti tugagandan so'ng ko'rishingiz mumkin"
+                    : "Tanlangan sana uchun kelmagan hodimlar topilmadi"}
                 </p>
               </div>
             ) : (
@@ -621,8 +766,8 @@ const Absence = () => {
         </Card>
       )}
 
-      {/* Monthly Report Section */}
-      {monthlyReport && (
+      {/* Monthly Report Section - Only show if branch is selected */}
+      {monthlyReport && currentBranch && (
         <>
           {/* Filters Card */}
           <Card className="border-gray-200 dark:border-gray-700">
@@ -1026,6 +1171,19 @@ const Absence = () => {
             </Card>
           )}
         </>
+      )}
+
+      {/* Show empty state when branch is not selected and we're not in loading state */}
+      {!currentBranch && !loading && (
+        <div className="text-center py-12">
+          <div className="mx-auto w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
+            <Landmark className="h-8 w-8 text-yellow-600" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Filial tanlanmagan</h3>
+          <p className="text-gray-500 mb-4 max-w-md mx-auto">
+            Davomat ma'lumotlarini ko'rish uchun iltimos, chap panel'dan filial tanlang
+          </p>
+        </div>
       )}
 
       {/* Status Update Modal */}

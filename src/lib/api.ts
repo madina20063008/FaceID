@@ -201,7 +201,6 @@ async getSubscriptions(userId?: number): Promise<Subscription[]> {
 
 // Add to ApiService class in lib/api.ts
 
-// Get absent employees for a specific date
 async getAbsentEmployees(date: string): Promise<{
   date: string;
   total: number;
@@ -215,28 +214,39 @@ async getAbsentEmployees(date: string): Promise<{
     date: string;
   }>;
 }> {
-  
   try {
     // Validate date
     if (!date) {
       throw new Error('Sana kiritilmagan');
     }
     
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    // Check if branch is selected
+    if (!branchId) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     // Build query parameters
     const params = new URLSearchParams();
     params.append('date', date);
-    params.append('user_id', this.USER_ID.toString());
+    params.append('branch_id', branchId); // Add branch_id
     
     const endpoint = `/attendance/absent/?${params.toString()}`;
+    
+    console.log('📡 Fetching absent employees from:', endpoint); // Debug log
     
     const response = await this.request<any>(endpoint);
     
     return response;
   } catch (error) {
-    
     const err = error as any;
+    
     if (err.message?.includes('Sana kiritilmagan')) {
       throw new Error('Sana kiritilmagan');
+    } else if (err.message?.includes('Filial tanlanmagan')) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
     } else if (err.status === 404) {
       throw new Error('Berilgan sana uchun ma\'lumot topilmadi');
     }
@@ -315,7 +325,6 @@ async getMonthlyReport(month: number, year: number, employeeId?: number): Promis
     }>;
   }>;
 }> {
-  
   try {
     // Validate parameters
     if (!month || !year) {
@@ -326,10 +335,19 @@ async getMonthlyReport(month: number, year: number, employeeId?: number): Promis
       throw new Error('Noto\'g\'ri oy raqami');
     }
     
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    // Check if branch is selected
+    if (!branchId) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     // Build query parameters
     const params = new URLSearchParams();
     params.append('month', month.toString());
     params.append('year', year.toString());
+    params.append('branch_id', branchId); // Add branch_id
     
     if (employeeId) {
       params.append('employee_id', employeeId.toString());
@@ -339,16 +357,20 @@ async getMonthlyReport(month: number, year: number, employeeId?: number): Promis
     
     const endpoint = `/attendance/report/monthly/?${params.toString()}`;
     
+    console.log('📡 Fetching monthly report from:', endpoint); // Debug log
+    
     const response = await this.request<any>(endpoint);
     
     return response;
   } catch (error) {
-    
     const err = error as any;
+    
     if (err.message?.includes('Oy va yil kiritilishi shart')) {
       throw new Error('Oy va yil kiritilishi shart');
     } else if (err.message?.includes('Noto\'g\'ri oy raqami')) {
       throw new Error('Noto\'g\'ri oy raqami (1-12 oralig\'ida bo\'lishi kerak)');
+    } else if (err.message?.includes('Filial tanlanmagan')) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
     }
     
     throw error;
@@ -1267,32 +1289,34 @@ async deleteShift(id: number): Promise<void> {
 }
 // ApiService klassiga Telegram kanallari metodlarini qo'shing
 
-// Barcha Telegram kanallarini olish
+// Telegram kanallarini olish
 async getTelegramChannels(userId?: number): Promise<TelegramChannel[]> {
   try {
     const params = new URLSearchParams();
+    params.append('user_id', this.USER_ID.toString());
     
     // Agar user_id berilgan bo'lsa (superadmin boshqa adminning kanallarini so'rash)
     if (userId && userId !== this.USER_ID) {
-      params.append('user_id', userId.toString());
-    } else {
-      // Oddiy admin yoki o'z kanallari uchun
-      params.append('user_id', this.USER_ID.toString());
+      params.append('target_user_id', userId.toString());
+    }
+    
+    // Add branch_id parameter
+    const branchId = localStorage.getItem('selected_branch_id');
+    if (branchId) {
+      params.append('branch_id', branchId);
     }
     
     const endpoint = `/utils/telegramchannel/${params.toString() ? '?' + params.toString() : ''}`;
+    
+    console.log('📡 Fetching Telegram channels from:', endpoint); // Debug log
     
     const response = await this.request<TelegramChannel[]>(endpoint);
     return response;
   } catch (error) {
     console.error('❌ Telegram kanallarini yuklashda xatolik:', error);
-    
-    // Demo/fallback uchun
-    return this.getMockTelegramChannels();
+    throw error;
   }
 }
-// In the ApiService class, add these Branch methods:
-// api.ts faylida quyidagi metodni qo'shing:
 
 // Kunlik hisobotni Excel formatda yuklash
 async getDailyExcelReport(date: string): Promise<Blob> {
@@ -1592,84 +1616,139 @@ async deleteBranch(id: number): Promise<void> {
 
 // Yangi Telegram kanali yaratish
 async createTelegramChannel(data: CreateTelegramChannelRequest): Promise<TelegramChannel> {
-  
   try {
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    if (!branchId) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     const channelData: any = {
       name: data.name,
       chat_id: data.chat_id,
       user_id: this.USER_ID, // HAR DOIM user_id yuborish kerak
+      branch_id: parseInt(branchId), // Add branch_id
     };
     
-    // resolved_id ni yubormaslik kerak (ishlatilmasin)
-    // if (data.resolved_id) {
-    //   channelData.resolved_id = data.resolved_id;
-    // }
+    // Add device_id if provided
+    if (data.device !== undefined && data.device !== null) {
+      channelData.device = data.device;
+    }
     
     // Agar superadmin boshqa foydalanuvchiga kanal biriktirmoqchi bo'lsa
     if (data.user && data.user !== this.USER_ID) {
       channelData.user_id = data.user;
     }
     
-    
     const endpoint = `/utils/telegramchannel/`;
+    
+    console.log('➕ Creating Telegram channel:', endpoint);
+    console.log('📝 Channel data:', channelData); // Debug log
+    
     const response = await this.request<TelegramChannel>(endpoint, {
       method: 'POST',
       body: JSON.stringify(channelData),
     });
     
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Telegram kanali yaratishda xatolik:', error);
+    
+    // More detailed error handling
+    if (error.message.includes('Filial tanlanmagan')) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     throw error;
   }
 }
 
 // Telegram kanalini yangilash
 async updateTelegramChannel(id: number, data: UpdateTelegramChannelRequest): Promise<TelegramChannel> {
-  
   try {
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    if (!branchId) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     // Yangilash uchun tayyor ma'lumot
-    const updateData: any = {};
+    const updateData: any = {
+      branch_id: parseInt(branchId), // Add branch_id
+    };
     
     if (data.name !== undefined) updateData.name = data.name;
     if (data.chat_id !== undefined) updateData.chat_id = data.chat_id;
     
-    // resolved_id ni yangilamang (ishlatilmasin)
-    // if (data.resolved_id !== undefined) updateData.resolved_id = data.resolved_id;
+    // Add device_id if provided
+    if (data.device !== undefined) {
+      updateData.device = data.device;
+    }
     
     // Agar superadmin foydalanuvchini o'zgartirmoqchi bo'lsa
     if (data.user !== undefined) {
       updateData.user_id = data.user;
     }
     
+    // Always send user_id
+    updateData.user_id = updateData.user_id || this.USER_ID;
+    
     const endpoint = `/utils/telegramchannel/${id}/`;
+    
+    console.log('📝 Updating Telegram channel:', endpoint);
+    console.log('📝 Update data:', updateData); // Debug log
+    
     const response = await this.request<TelegramChannel>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(updateData),
     });
     
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`❌ ${id} ID-li Telegram kanalini yangilashda xatolik:`, error);
+    
+    // More detailed error handling
+    if (error.message.includes('Filial tanlanmagan')) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     throw error;
   }
 }
 
 // Telegram kanalini o'chirish
 async deleteTelegramChannel(id: number): Promise<void> {
-  
   try {
-    // O'chirish uchun user_id bilan so'rov yuborish
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    if (!branchId) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
+    // O'chirish uchun user_id va branch_id bilan so'rov yuborish
     const params = new URLSearchParams();
     params.append('user_id', this.USER_ID.toString());
+    params.append('branch_id', branchId);
     
     const endpoint = `/utils/telegramchannel/${id}/?${params.toString()}`;
+    
+    console.log('🗑️ Deleting Telegram channel:', endpoint);
+    
     await this.request<void>(endpoint, {
       method: 'DELETE',
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error(`❌ ${id} ID-li Telegram kanalini o\'chirishda xatolik:`, error);
+    
+    // More detailed error handling
+    if (error.message.includes('Filial tanlanmagan')) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+    }
+    
     throw error;
   }
 }
@@ -1777,24 +1856,33 @@ async getEmployeeHistoryToday(employeeId: number): Promise<EmployeeHistory[]> {
 }
 // Updated syncEvents method - NO date parameters in URL
 async syncEvents(): Promise<EventSyncResponse> {
-  
   try {
-    // Send POST request WITHOUT any date parameters
-    const endpoint = `/event/events-sync/?user_id=${this.USER_ID}`;
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    
+    // Build endpoint URL
+    let endpoint = `/event/events-sync/?user_id=${this.USER_ID}`;
+    
+    // Add branch_id if available
+    if (branchId) {
+      endpoint += `&branch_id=${branchId}`;
+    }
+    
+    console.log('📡 Syncing events from:', endpoint); // Debug log
     
     const response = await this.request<any>(endpoint, {
       method: 'POST',
       body: JSON.stringify({}), // Empty body
     });
     
+    console.log('✅ Sync response:', response); // Debug log
     
     // Format response to match EventSyncResponse interface
     return {
-  success: response.success,
-  synced_devices: response.synced_devices ?? 0,
-  synced_events: response.synced_events ?? response.added ?? 0,
-};
-
+      success: response.success,
+      synced_devices: response.synced_devices ?? 0,
+      synced_events: response.synced_events ?? response.added ?? 0,
+    };
   } catch (error: any) {
     console.error('❌ Failed to sync events:', error);
     
@@ -2301,17 +2389,23 @@ private getMockDevices(): Device[] {
     }
   }
 
-  // NEW: Search employees with user_id=2
-  async searchEmployees(query: string): Promise<Employee[]> {
-    try {
-      const endpoint = `/person/search/?q=${encodeURIComponent(query)}&user_id=${this.USER_ID}`;
-      const employees = await this.request<Employee[]>(endpoint);
-      return employees;
-    } catch (error) {
-      console.error('❌ Search failed:', error);
-      throw error;
+  // NEW: Search employees with user_id=2 and branch_id
+async searchEmployees(query: string, branchId?: number): Promise<Employee[]> {
+  try {
+    let endpoint = `/person/search/?q=${encodeURIComponent(query)}&user_id=${this.USER_ID}`;
+    
+    // Add branch_id if provided
+    if (branchId) {
+      endpoint += `&branch_id=${branchId}`;
     }
+    
+    const employees = await this.request<Employee[]>(endpoint);
+    return employees;
+  } catch (error) {
+    console.error('❌ Search failed:', error);
+    throw error;
   }
+}
 
   // NEW: Get employees with pagination and user_id=2
   async getEmployeesPaginated(page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<Employee>> {
@@ -2327,56 +2421,96 @@ private getMockDevices(): Device[] {
   }
 
   // Sync employees with devices
-  async syncEmployees(): Promise<{
-    success: boolean;
-    synced_devices: number;
-    added: number;
-    deleted: number;
-    message?: string;
-  }> {
+async syncEmployees(): Promise<{
+  success: boolean;
+  synced_devices: number;
+  added: number;
+  deleted: number;
+  message?: string;
+}> {
+  try {
+    // Get branch_id from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
     
-    try {
-      // Send POST request to sync endpoint with user_id parameter
-      const endpoint = `/person/sync-employees/?user_id=${this.USER_ID}`;
-      
-      const response = await this.request<any>(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({}), // Empty body, user_id is in query params
-      });
-      
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to sync employees:', error);
-      throw error;
+    // Check if branch is selected
+    if (!branchId) {
+      throw new Error('Filial tanlanmagan. Iltimos, avval filial tanlang.');
     }
+    
+    // Build endpoint URL with both branch_id and user_id
+    let endpoint = `/person/sync-employees/?user_id=${this.USER_ID}&branch_id=${branchId}`;
+    
+    console.log('📡 Syncing employees from:', endpoint); // Debug log
+    
+    const response = await this.request<any>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({}), // Empty body
+    });
+    
+    console.log('✅ Sync response:', response); // Debug log
+    
+    return response;
+  } catch (error: any) {
+    console.error('❌ Failed to sync employees:', error);
+    
+    // More detailed error handling
+    let errorMessage = 'Hodimlarni sinxronizatsiya qilishda xatolik';
+    
+    if (error.message.includes('Filial tanlanmagan')) {
+      errorMessage = error.message;
+    } else if (error.status === 400) {
+      errorMessage = 'Noto\'g\'ri so\'rov formati';
+    } else if (error.status === 401) {
+      errorMessage = 'Kirish huquqi yo\'q';
+    } else if (error.status === 403) {
+      errorMessage = 'Ruxsat yo\'q';
+    } else if (error.status === 503) {
+      errorMessage = 'Server ishlamayapti';
+    } else if (error.message?.includes('Failed to fetch')) {
+      errorMessage = 'Internet aloqasi yo\'q';
+    }
+    
+    // Throw new error with user-friendly message
+    const userError = new Error(errorMessage);
+    (userError as any).status = error.status;
+    (userError as any).originalError = error;
+    throw userError;
   }
+}
 
-  // Get all employees with user_id=2
-  async getEmployees(): Promise<Employee[]> {
+  // In your api.ts file, update the getEmployees method:
+async getEmployees(branchId?: number): Promise<Employee[]> {
+  
+  try {
+    // Build endpoint with parameters
+    let endpoint = `/person/employees/?user_id=${this.USER_ID}`;
     
-    try {
-      const endpoint = `/person/employees/?user_id=${this.USER_ID}`;
-      
-      const response = await this.request<any>(endpoint);
-      
-      // Check if the response has an "employees" array
-      if (response.employees && Array.isArray(response.employees)) {
-        return response.employees as Employee[];
-      } 
-      // If the response itself is an array (fallback)
-      else if (Array.isArray(response)) {
-        return response as Employee[];
-      } 
-      // Otherwise, return empty array
-      else {
-        console.warn('⚠️ No employees array found in response:', response);
-        return [];
-      }
-    } catch (error) {
-      console.error('❌ Failed to load employees:', error);
-      throw error;
+    // Add branch_id if provided
+    if (branchId) {
+      endpoint += `&branch_id=${branchId}`;
     }
+    
+    
+    const response = await this.request<any>(endpoint);
+    
+    // Check if the response has an "employees" array
+    if (response.employees && Array.isArray(response.employees)) {
+      return response.employees as Employee[];
+    } 
+    // If the response itself is an array (fallback)
+    else if (Array.isArray(response)) {
+      return response as Employee[];
+    } 
+    // Otherwise, return empty array
+    else {
+      console.warn('⚠️ No employees array found in response:', response);
+      return [];
+    }
+  } catch (error) {
+    console.error('❌ Failed to load employees:', error);
+    throw error;
   }
+}
 
   async createEmployee(data: CreateEmployeeRequest): Promise<Employee> {
     

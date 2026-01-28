@@ -6,7 +6,8 @@ import {
   TelegramChannel, 
   CreateTelegramChannelRequest,
   UpdateTelegramChannelRequest,
-  User 
+  User,
+  Device
 } from '../lib/types';
 
 const TelegramChannelPage = () => {
@@ -14,6 +15,7 @@ const TelegramChannelPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [targetUserId, setTargetUserId] = useState<string>('');
   const [showAddChannel, setShowAddChannel] = useState(false);
   const [showEditChannel, setShowEditChannel] = useState<TelegramChannel | null>(null);
@@ -21,18 +23,23 @@ const TelegramChannelPage = () => {
     name: '',
     chat_id: '',
     resolved_id: '',
-    user: undefined
+    device: undefined,
+    user: undefined,
+    branch: undefined
   });
   const [editChannel, setEditChannel] = useState<UpdateTelegramChannelRequest>({
     name: '',
     chat_id: '',
     resolved_id: '',
-    user: undefined
+    device: undefined,
+    user: undefined,
+    branch: undefined
   });
 
   // Telegram kanallarini yuklash
   useEffect(() => {
     loadCurrentUserAndChannels();
+    loadDevices(); // Load devices for dropdown
   }, []);
 
   const loadCurrentUserAndChannels = async (userId?: number) => {
@@ -51,13 +58,24 @@ const TelegramChannelPage = () => {
       console.error('Telegram kanallarini yuklashda xatolik:', err);
       
       // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
+      if (err.message?.includes('Filial tanlanmagan')) {
+        setError('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+      } else if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else {
         setError(err.message || 'Telegram kanallarini yuklashda xatolik');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDevices = async () => {
+    try {
+      const devicesData = await apiService.getDevices();
+      setDevices(devicesData);
+    } catch (err) {
+      console.error('Qurilmalarni yuklashda xatolik:', err);
     }
   };
 
@@ -82,17 +100,24 @@ const TelegramChannelPage = () => {
       return;
     }
     
-    // resolved_id ni olib tashlash (ishlatilmasin)
+    // Get current branch from localStorage
+    const branchId = localStorage.getItem('selected_branch_id');
+    if (!branchId) {
+      setError('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+      return;
+    }
+    
     const formattedData: CreateTelegramChannelRequest = {
       name: newChannel.name,
       chat_id: newChannel.chat_id,
+      device: newChannel.device,
+      branch: parseInt(branchId), // Add current branch
     };
     
     // Agar foydalanuvchi superadmin bo'lsa va user ID kiritgan bo'lsa
     if (currentUser?.role === 'superadmin' && newChannel.user) {
       formattedData.user = newChannel.user;
     }
-    
     
     try {
       await apiService.createTelegramChannel(formattedData);
@@ -104,20 +129,24 @@ const TelegramChannelPage = () => {
         name: '',
         chat_id: '',
         resolved_id: '',
-        user: undefined
+        device: undefined,
+        user: undefined,
+        branch: undefined
       });
     } catch (err: any) {
-      console.error('Telegram kanali qo\'shish xatosi:', err);
+      console.error("Telegram kanali qo'shish xatosi:", err);
       
       // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
+      if (err.message?.includes('Filial tanlanmagan')) {
+        setError('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+      } else if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else if (err.status === 400 && err.data?.detail) {
         setError(`Xatolik: ${err.data.detail}`);
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
       } else {
-        setError('Telegram kanali qo\'shishda xatolik');
+        setError("Telegram kanali qo'shishda xatolik");
       }
     }
   };
@@ -137,10 +166,10 @@ const TelegramChannelPage = () => {
         updateData.chat_id = editChannel.chat_id;
       }
       
-      // resolved_id ni yangilamang
-      // if (editChannel.resolved_id && editChannel.resolved_id !== showEditChannel.resolved_id) {
-      //   updateData.resolved_id = editChannel.resolved_id;
-      // }
+      // device ni yangilash
+      if (editChannel.device !== undefined && editChannel.device !== showEditChannel.device) {
+        updateData.device = editChannel.device;
+      }
       
       // Agar foydalanuvchi superadmin bo'lsa
       if (currentUser?.role === 'superadmin' && editChannel.user !== undefined) {
@@ -162,13 +191,17 @@ const TelegramChannelPage = () => {
         name: '',
         chat_id: '',
         resolved_id: '',
-        user: undefined
+        device: undefined,
+        user: undefined,
+        branch: undefined
       });
     } catch (err: any) {
       console.error('Telegram kanalini yangilash xatosi:', err);
       
       // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
+      if (err.message?.includes('Filial tanlanmagan')) {
+        setError('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+      } else if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else if (err.status === 400 && err.data?.detail) {
         setError(`Xatolik: ${err.data.detail}`);
@@ -193,7 +226,9 @@ const TelegramChannelPage = () => {
       console.error('Telegram kanalini o\'chirish xatosi:', err);
       
       // API xatosini aniqroq ko'rsatish
-      if (err.status === 400 && err.data?.user_id) {
+      if (err.message?.includes('Filial tanlanmagan')) {
+        setError('Filial tanlanmagan. Iltimos, avval filial tanlang.');
+      } else if (err.status === 400 && err.data?.user_id) {
         setError(`Xatolik: ${err.data.user_id}`);
       } else if (err.message) {
         setError(`Xatolik: ${err.message}`);
@@ -220,7 +255,9 @@ const TelegramChannelPage = () => {
       name: channel.name,
       chat_id: channel.chat_id,
       resolved_id: channel.resolved_id,
-      user: channel.user
+      device: channel.device,
+      user: channel.user,
+      branch: channel.branch
     });
   };
 
@@ -232,6 +269,13 @@ const TelegramChannelPage = () => {
       return `ID: ${chatId}`; // Grup ID
     }
     return chatId;
+  };
+
+  // Qurilmani nomini olish
+  const getDeviceName = (deviceId?: number): string => {
+    if (!deviceId) return 'Qurilma tanlanmagan';
+    const device = devices.find(d => d.id === deviceId);
+    return device ? device.name || `Qurilma ${deviceId}` : `Qurilma ${deviceId}`;
   };
 
   if (loading) {
@@ -333,22 +377,33 @@ const TelegramChannelPage = () => {
                     value={newChannel.chat_id}
                     onChange={(e) => setNewChannel({...newChannel, chat_id: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                    placeholder="Masalan: @company_staff yoki -100123456789"
+                    placeholder="Masalan: @company_staff yoki https://t.me/+ARu2NbBo4"
                   />
                 </div>
                 
-                {/* resolved_id maydoni (yashirin) */}
-                <div className="hidden">
+                {/* Device selector */}
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Resolved ID (ishlatilmaydi)
+                    Qurilmani tanlash (ixtiyoriy)
                   </label>
-                  <input
-                    type="text"
-                    value={newChannel.resolved_id}
-                    onChange={(e) => setNewChannel({...newChannel, resolved_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    disabled
-                  />
+                  <select
+                    value={newChannel.device || ''}
+                    onChange={(e) => setNewChannel({
+                      ...newChannel, 
+                      device: e.target.value ? parseInt(e.target.value) : undefined
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Qurilma tanlanmagan</option>
+                    {devices.map((device) => (
+                      <option key={device.id} value={device.id}>
+                        {device.name} (ID: {device.id})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Ushbu qurilma bilan bog'langan hodimlar bu kanalga xabarlar yuboradi
+                  </p>
                 </div>
                 
                 {/* Superadmin uchun: Foydalanuvchiga biriktirish */}
@@ -429,7 +484,30 @@ const TelegramChannelPage = () => {
                   />
                 </div>
                 
-                
+                {/* Device selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Qurilma
+                  </label>
+                  <select
+                    value={editChannel.device || ''}
+                    onChange={(e) => setEditChannel({
+                      ...editChannel, 
+                      device: e.target.value ? parseInt(e.target.value) : undefined
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Qurilma tanlanmagan</option>
+                    {devices.map((device) => (
+                      <option key={device.id} value={device.id}>
+                        {device.name} (ID: {device.id})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Joriy: {getDeviceName(showEditChannel.device)}
+                  </p>
+                </div>
                 
                 {/* Superadmin uchun: Foydalanuvchini o'zgartirish */}
                 {currentUser?.role === 'superadmin' && (
@@ -512,10 +590,13 @@ const TelegramChannelPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Chat ID / Username
                   </th>
-                
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Qurilma
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Foydalanuvchi
                   </th>
+                  
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Harakatlar
                   </th>
@@ -543,7 +624,11 @@ const TelegramChannelPage = () => {
                         {channel.chat_id.startsWith('@') ? 'Username' : 'Chat ID'}
                       </div>
                     </td>
-                   
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 dark:text-white">
+                        {getDeviceName(channel.device)}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900 dark:text-white">
                         <span className="font-medium">ID:</span> {channel.user}
@@ -554,6 +639,7 @@ const TelegramChannelPage = () => {
                         )}
                       </div>
                     </td>
+                    
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <button
@@ -575,12 +661,11 @@ const TelegramChannelPage = () => {
               </tbody>
             </table>
           </div>
-          
-         
         </div>
       )}
     </div>
   );
 };
+
 
 export default TelegramChannelPage;

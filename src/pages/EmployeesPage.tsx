@@ -57,6 +57,7 @@ import {
   RefreshCw,
   AlertCircle,
   RefreshCcw,
+  Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +73,12 @@ export function EmployeesPage() {
   const [useMockData, setUseMockData] = useState(false);
   const [isViewLoading, setIsViewLoading] = useState(false);
 
+  // Add state for current branch
+  const [currentBranch, setCurrentBranch] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+
   // NEW STATE: For selectors
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [workDays, setWorkDays] = useState<WorkDay[]>([]);
@@ -83,7 +90,6 @@ export function EmployeesPage() {
     name: "",
     position: "",
     phone_number: "",
-    // ❌ Remove employee_no from initial state
     description: "",
     salary: 0,
     device_id: 1,
@@ -100,6 +106,107 @@ export function EmployeesPage() {
     fine: 0,
     day_off: null,
   });
+
+  // Get current branch from localStorage
+  const getCurrentBranch = () => {
+    const savedBranchId = localStorage.getItem('selected_branch_id');
+    const savedBranchName = localStorage.getItem('selected_branch_name');
+    
+    if (savedBranchId && savedBranchName) {
+      return {
+        id: parseInt(savedBranchId),
+        name: savedBranchName
+      };
+    }
+    return null;
+  };
+
+  // Listen for branch changes
+  useEffect(() => {
+    const handleBranchChange = () => {
+      const branch = getCurrentBranch();
+      setCurrentBranch(branch);
+      
+      // Reload employees for the new branch
+      if (branch) {
+        fetchEmployees(branch.id);
+      }
+    };
+
+    window.addEventListener('branchChanged', handleBranchChange);
+    
+    return () => {
+      window.removeEventListener('branchChanged', handleBranchChange);
+    };
+  }, []);
+
+  const filteredEmployees = Array.isArray(employees)
+    ? employees
+        .filter(
+          (emp) =>
+            emp?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            emp?.employee_no
+              ?.toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            emp?.position?.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+        // ✅ SORT A → Z by name
+        .sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", "uz", {
+            sensitivity: "base",
+          }),
+        )
+    : [];
+
+  // Fetch all employees with branch_id
+  const fetchEmployees = async (branchId?: number) => {
+    try {
+      setIsLoading(true);
+      
+      // Get branch if not provided
+      let targetBranchId = branchId;
+      if (!targetBranchId) {
+        const branch = getCurrentBranch();
+        if (branch) {
+          targetBranchId = branch.id;
+          setCurrentBranch(branch);
+        }
+      }
+
+      try {
+        // Pass branch_id to API call
+        const employeesData = await apiService.getEmployees(targetBranchId);
+
+        if (Array.isArray(employeesData) && employeesData.length > 0) {
+          setEmployees(employeesData);
+          setUseMockData(false);
+          toast.success(`Hodimlar yuklandi: ${employeesData.length} ta`);
+        } else {
+          setEmployees(mockEmployees);
+          setUseMockData(true);
+          toast.warning(
+            currentBranch 
+              ? `"${currentBranch.name}" filialida hodimlar topilmadi. Namuna ma'lumotlar ishlatilmoqda.`
+              : "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda.",
+          );
+        }
+      } catch (apiError) {
+        console.error("API error:", apiError);
+        setEmployees(mockEmployees);
+        setUseMockData(true);
+        toast.warning(
+          "API ga ulanib bo'lmadi. Namuna ma'lumotlar ishlatilmoqda.",
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch employees:", error);
+      setEmployees(mockEmployees);
+      setUseMockData(true);
+      toast.warning("Xatolik yuz berdi. Namuna ma'lumotlar ishlatilmoqda.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Fetch all selectors (shifts, work_days, day_offs)
   const fetchSelectors = async () => {
@@ -141,108 +248,63 @@ export function EmployeesPage() {
     }
   };
 
-  const filteredEmployees = Array.isArray(employees)
-    ? employees
-        .filter(
-          (emp) =>
-            emp?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            emp?.employee_no
-              ?.toLowerCase()
-              .includes(searchQuery.toLowerCase()) ||
-            emp?.position?.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-        // ✅ SORT A → Z by name
-        .sort((a, b) =>
-          (a.name || "").localeCompare(b.name || "", "uz", {
-            sensitivity: "base",
-          }),
-        )
-    : [];
-
-  // Fetch all employees
-  const fetchEmployees = async () => {
-    try {
-      setIsLoading(true);
-
-      try {
-        const employeesData = await apiService.getEmployees();
-
-        if (Array.isArray(employeesData) && employeesData.length > 0) {
-          setEmployees(employeesData);
-          setUseMockData(false);
-          toast.success(`Hodimlar yuklandi: ${employeesData.length} ta`);
-        } else {
-          setEmployees(mockEmployees);
-          setUseMockData(true);
-          toast.warning(
-            "API dan ma'lumot ololmadi. Namuna ma'lumotlar ishlatilmoqda.",
-          );
-        }
-      } catch (apiError) {
-        console.error("API error:", apiError);
-        setEmployees(mockEmployees);
-        setUseMockData(true);
-        toast.warning(
-          "API ga ulanib bo'lmadi. Namuna ma'lumotlar ishlatilmoqda.",
-        );
-      }
-    } catch (error) {
-      console.error("Failed to fetch employees:", error);
-      setEmployees(mockEmployees);
-      setUseMockData(true);
-      toast.warning("Xatolik yuz berdi. Namuna ma'lumotlar ishlatilmoqda.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Refresh employees with sync functionality
-  const handleRefresh = async () => {
-    try {
-      setIsRefreshing(true);
+const handleRefresh = async () => {
+  try {
+    // Check if branch is selected
+    if (!currentBranch) {
+      toast.error("Iltimos, filial tanlang");
+      return;
+    }
 
-      if (useMockData) {
-        // In mock mode, just fetch employees
-        await fetchEmployees();
-        toast.success("Hodimlar ro'yxati yangilandi (namuna rejim)");
-      } else {
-        try {
-          // Step 1: Sync employees with devices
-          const syncResult = await apiService.syncEmployees();
+    setIsRefreshing(true);
 
-          if (syncResult.success) {
-            let successMessage = `Hodimlar sinxronizatsiya qilindi`;
+    if (useMockData) {
+      // In mock mode, just fetch employees
+      await fetchEmployees();
+      toast.success("Hodimlar ro'yxati yangilandi (namuna rejim)");
+    } else {
+      try {
+        // Step 1: Sync employees with devices
+        const syncResult = await apiService.syncEmployees();
 
-            // Add sync statistics to the message
-            const statsMessages = [];
-            if (syncResult.synced_devices > 0) {
-              statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
-            }
-            if (syncResult.added > 0) {
-              statsMessages.push(
-                `${syncResult.added} ta yangi hodim qo'shildi`,
-              );
-            }
-            if (syncResult.deleted > 0) {
-              statsMessages.push(`${syncResult.deleted} ta hodim o'chirildi`);
-            }
+        if (syncResult.success) {
+          let successMessage = `Hodimlar sinxronizatsiya qilindi`;
 
-            if (statsMessages.length > 0) {
-              successMessage += `: ${statsMessages.join(", ")}`;
-            }
-
-            toast.success(successMessage);
-          } else {
-            toast.warning(
-              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
+          // Add sync statistics to the message
+          const statsMessages = [];
+          if (syncResult.synced_devices > 0) {
+            statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
+          }
+          if (syncResult.added > 0) {
+            statsMessages.push(
+              `${syncResult.added} ta yangi hodim qo'shildi`,
             );
           }
+          if (syncResult.deleted > 0) {
+            statsMessages.push(`${syncResult.deleted} ta hodim o'chirildi`);
+          }
 
-          // Step 2: Fetch updated employees list
-          await fetchEmployees();
-        } catch (syncError: any) {
-          console.error("❌ Sync failed:", syncError);
+          if (statsMessages.length > 0) {
+            successMessage += `: ${statsMessages.join(", ")}`;
+          }
 
+          toast.success(successMessage);
+        } else {
+          toast.warning(
+            "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
+          );
+        }
+
+        // Step 2: Fetch updated employees list
+        await fetchEmployees();
+      } catch (syncError: any) {
+        console.error("❌ Sync failed:", syncError);
+        
+        // Special handling for branch not selected error
+        if (syncError.message.includes('Filial tanlanmagan')) {
+          toast.error(syncError.message);
+        } else {
           // Try to fetch employees even if sync fails
           try {
             await fetchEmployees();
@@ -255,23 +317,24 @@ export function EmployeesPage() {
           }
         }
       }
-    } catch (error: any) {
-      console.error("❌ Refresh failed:", error);
-
-      // User-friendly error messages
-      if (error.message.includes("Failed to fetch")) {
-        toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
-      } else if (error.status === 401) {
-        toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
-      } else if (error.status === 403) {
-        toast.error("Bu amalni bajarish uchun ruxsat yo'q");
-      } else {
-        toast.error("Yangilashda xatolik yuz berdi");
-      }
-    } finally {
-      setIsRefreshing(false);
     }
-  };
+  } catch (error: any) {
+    console.error("❌ Refresh failed:", error);
+
+    // User-friendly error messages
+    if (error.message.includes("Failed to fetch")) {
+      toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
+    } else if (error.status === 401) {
+      toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
+    } else if (error.status === 403) {
+      toast.error("Bu amalni bajarish uchun ruxsat yo'q");
+    } else {
+      toast.error(error.message || "Yangilashda xatolik yuz berdi");
+    }
+  } finally {
+    setIsRefreshing(false);
+  }
+};
 
   // Create new employee
   const handleCreate = async () => {
@@ -311,6 +374,9 @@ export function EmployeesPage() {
         setEmployees([...employees, newEmployee]);
         toast.success("Hodim qo'shildi (namuna rejim)");
       } else {
+        // Set branch from current branch
+        const branchData = currentBranch ? { branch: currentBranch.id } : {};
+        
         // Prepare employee data - DO NOT include employee_no
         const employeeData: CreateEmployeeRequest = {
           device_id: formData.device_id,
@@ -328,9 +394,9 @@ export function EmployeesPage() {
           salary: formData.salary || 0, // Ensure 0 if undefined
           break_time: formData.break_time,
           work_day: formData.work_day || null,
-          branch: formData.branch,
           fine: formData.fine || 0, // Ensure 0 if undefined
           day_off: formData.day_off || null,
+          ...branchData, // Add current branch
           // ❌ DO NOT include employee_no - API will generate it
         };
 
@@ -425,7 +491,7 @@ export function EmployeesPage() {
           salary: formData.salary || 0,
           break_time: formData.break_time,
           work_day: formData.work_day || null,
-          branch: formData.branch,
+          branch: currentBranch?.id || null, // Add current branch
           fine: formData.fine || 0,
           day_off: formData.day_off || null,
           // ❌ DO NOT include employee_no in updates
@@ -492,7 +558,7 @@ export function EmployeesPage() {
         shift: employee.shift || null,
         break_time: employee.break_time || null,
         work_day: employee.work_day || null,
-        branch: employee.branch || null,
+        branch: employee.branch || currentBranch?.id || null, // Set current branch
         fine: employee.fine || 0,
         day_off: employee.day_off || null,
       };
@@ -540,7 +606,6 @@ export function EmployeesPage() {
       name: "",
       position: "",
       phone_number: "",
-      // ❌ Remove employee_no from reset
       description: "",
       salary: 0,
       device_id: 1,
@@ -553,7 +618,7 @@ export function EmployeesPage() {
       shift: null,
       break_time: null,
       work_day: null,
-      branch: null,
+      branch: currentBranch?.id || null, // Set current branch
       fine: 0,
       day_off: null,
     });
@@ -569,7 +634,11 @@ export function EmployeesPage() {
 
     try {
       setIsLoading(true);
-      const results = await apiService.searchEmployees(searchQuery);
+      // Pass branch_id to search API
+      const results = await apiService.searchEmployees(
+        searchQuery, 
+        currentBranch?.id
+      );
       setEmployees(results);
     } catch (error) {
       console.error("Search error:", error);
@@ -599,7 +668,12 @@ export function EmployeesPage() {
 
   // Initialize
   useEffect(() => {
-    fetchEmployees();
+    // Set current branch on initial load
+    const branch = getCurrentBranch();
+    setCurrentBranch(branch);
+    
+    // Fetch employees with branch_id
+    fetchEmployees(branch?.id);
     fetchSelectors();
   }, []);
 
@@ -615,7 +689,9 @@ export function EmployeesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hodimlar</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-3xl font-bold tracking-tight">Hodimlar</h1>
+          </div>
           <p className="text-gray-500 dark:text-gray-400">
             Barcha hodimlarni boshqaring
             {useMockData && (
@@ -624,25 +700,53 @@ export function EmployeesPage() {
                 Namuna rejim
               </span>
             )}
+            {!currentBranch && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Filial tanlanmagan
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || !currentBranch}
+            title={!currentBranch ? "Iltimos, filial tanlang" : ""}
           >
             <RefreshCcw
               className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
             {isRefreshing ? "Sinxronizatsiya..." : "Sinxronizatsiyalash"}
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)}>
+          <Button 
+            onClick={() => setIsCreateOpen(true)} 
+            disabled={!currentBranch}
+            title={!currentBranch ? "Hodim qo'shish uchun filial tanlang" : ""}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Yangi hodim
           </Button>
         </div>
       </div>
+
+      {/* Branch Warning */}
+      {!currentBranch && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+            <div>
+              <p className="font-medium text-yellow-800 dark:text-yellow-300">
+                Filial tanlanmagan
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                Hodimlarni ko'rish va boshqarish uchun chap panel'dan filial tanlang
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Employees Table */}
       <Card>
@@ -650,6 +754,9 @@ export function EmployeesPage() {
           <CardTitle>Hodimlar ro'yxati</CardTitle>
           <div className="text-sm text-gray-500">
             {isLoading ? "Yuklanmoqda..." : `Jami: ${employees.length} ta`}
+            {currentBranch && (
+              <span className="ml-2">• Filial: {currentBranch.name}</span>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -662,12 +769,13 @@ export function EmployeesPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                 className="pl-9"
+                disabled={!currentBranch}
               />
             </div>
             <Button
               onClick={handleSearch}
               variant="outline"
-              disabled={isLoading}
+              disabled={isLoading || !currentBranch}
             >
               Qidirish
             </Button>
@@ -683,6 +791,16 @@ export function EmployeesPage() {
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                 <p className="mt-2 text-gray-500">Hodimlar yuklanmoqda...</p>
+              </div>
+            ) : !currentBranch ? (
+              <div className="text-center py-8">
+                <div className="mx-auto w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
+                  <Landmark className="h-8 w-8 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Filial tanlanmagan</h3>
+                <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                  Hodimlarni ko'rish uchun iltimos, chap panel'dan filial tanlang
+                </p>
               </div>
             ) : filteredEmployees.length === 0 ? (
               <div className="text-center py-8">
@@ -723,7 +841,11 @@ export function EmployeesPage() {
                             <span className="font-medium block">
                               {employee.name || "Noma'lum"}
                             </span>
-                            
+                            {employee.employee_no && (
+                              <span className="text-xs text-gray-500">
+                                {employee.employee_no}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -746,9 +868,7 @@ export function EmployeesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              openEdit(employee);
-                            }}
+                            onClick={() => openEdit(employee)}
                             title="Tahrirlash"
                           >
                             <Pencil className="h-4 w-4" />
@@ -791,10 +911,29 @@ export function EmployeesPage() {
             </DialogTitle>
             <DialogDescription>
               Hodim ma'lumotlarini kiriting
+              {currentBranch && ` (Filial: ${currentBranch.name})`}
               {useMockData && " (namuna rejim)"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {currentBranch && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                  Filial: {currentBranch.name}
+                </p>
+                <input
+                  type="hidden"
+                  value={currentBranch.id}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      branch: e.target.value ? parseInt(e.target.value) : null,
+                    })
+                  }
+                />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="name">Ism familiya *</Label>
               <Input
@@ -807,7 +946,7 @@ export function EmployeesPage() {
                 required
               />
             </div>
-            {/* ❌ REMOVE employee_no input field entirely */}
+            
             <div className="space-y-2">
               <Label htmlFor="position">Lavozim *</Label>
               <Input
@@ -820,6 +959,7 @@ export function EmployeesPage() {
                 required
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="phone_number">Telefon raqami *</Label>
               <Input
@@ -833,6 +973,7 @@ export function EmployeesPage() {
                 required
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="salary">Maosh (so'm)</Label>
               <Input
@@ -851,7 +992,7 @@ export function EmployeesPage() {
               />
             </div>
 
-            {/* NEW: Shift selector */}
+            {/* Shift selector */}
             <div className="space-y-2">
               <Label htmlFor="shift">Smena</Label>
               <select
@@ -878,7 +1019,7 @@ export function EmployeesPage() {
               </select>
             </div>
 
-            {/* NEW: Work Day selector */}
+            {/* Work Day selector */}
             <div className="space-y-2">
               <Label htmlFor="work_day">Ish kunlari</Label>
               <select
@@ -905,7 +1046,7 @@ export function EmployeesPage() {
               </select>
             </div>
 
-            {/* NEW: Day Off selector */}
+            {/* Day Off selector */}
             <div className="space-y-2">
               <Label htmlFor="day_off">Dam olish kunlari</Label>
               <select
@@ -958,8 +1099,12 @@ export function EmployeesPage() {
             <Button
               onClick={editEmployee ? handleUpdate : handleCreate}
               disabled={
-                !formData.name || !formData.position || !formData.phone_number
+                !formData.name || 
+                !formData.position || 
+                !formData.phone_number ||
+                !currentBranch
               }
+              title={!currentBranch ? "Iltimos, filial tanlang" : ""}
             >
               {editEmployee ? "Saqlash" : "Qo'shish"}
             </Button>
@@ -1043,7 +1188,7 @@ export function EmployeesPage() {
                   </p>
                 </div>
 
-                {/* NEW: Show selector information */}
+                {/* Show selector information */}
                 {viewEmployee.shift && (
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1073,6 +1218,17 @@ export function EmployeesPage() {
                     </p>
                     <p className="font-medium">
                       {getSelectorName(viewEmployee.day_off, dayOffs)}
+                    </p>
+                  </div>
+                )}
+
+                {viewEmployee.branch && currentBranch && (
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Filial
+                    </p>
+                    <p className="font-medium">
+                      {currentBranch.name} (ID: {viewEmployee.branch})
                     </p>
                   </div>
                 )}
