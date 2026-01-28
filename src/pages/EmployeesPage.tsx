@@ -752,12 +752,7 @@ const handleRefresh = async () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Hodimlar ro'yxati</CardTitle>
-          <div className="text-sm text-gray-500">
-            {isLoading ? "Yuklanmoqda..." : `Jami: ${employees.length} ta`}
-            {currentBranch && (
-              <span className="ml-2">• Filial: {currentBranch.name}</span>
-            )}
-          </div>
+        
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -909,30 +904,10 @@ const handleRefresh = async () => {
             <DialogTitle>
               {editEmployee ? "Hodimni tahrirlash" : "Yangi hodim qo'shish"}
             </DialogTitle>
-            <DialogDescription>
-              Hodim ma'lumotlarini kiriting
-              {currentBranch && ` (Filial: ${currentBranch.name})`}
-              {useMockData && " (namuna rejim)"}
-            </DialogDescription>
+            
           </DialogHeader>
           <div className="space-y-4">
-            {currentBranch && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md">
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                  Filial: {currentBranch.name}
-                </p>
-                <input
-                  type="hidden"
-                  value={currentBranch.id}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      branch: e.target.value ? parseInt(e.target.value) : null,
-                    })
-                  }
-                />
-              </div>
-            )}
+            
             
             <div className="space-y-2">
               <Label htmlFor="name">Ism familiya *</Label>
