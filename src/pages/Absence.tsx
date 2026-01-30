@@ -53,7 +53,6 @@ import {
   CalendarDays,
   User,
   Pencil,
-  Download,
   FileSpreadsheet,
   Landmark,
 } from 'lucide-react';
@@ -129,6 +128,13 @@ const Absence = () => {
     { value: 'sbk', label: 'Sababli kelmadi' },
     { value: 'szk', label: 'Sababsiz kelmadi' },
   ];
+
+  // Helper function to sort employees by name
+  const sortEmployeesByName = (employees: Employee[]) => {
+    return [...employees].sort((a, b) => 
+      a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })
+    );
+  };
 
   // Listen for branch changes
   useEffect(() => {
@@ -214,7 +220,9 @@ const Absence = () => {
       }
       
       const data = await apiService.getEmployees(branch.id);
-      setEmployees(data);
+      // Sort employees alphabetically
+      const sortedEmployees = sortEmployeesByName(data);
+      setEmployees(sortedEmployees);
     } catch (err) {
       console.error('Failed to load employees:', err);
       toast.error('Hodimlarni yuklashda xatolik');
@@ -359,8 +367,12 @@ const Absence = () => {
       // CSV sarlavhalari
       csvData.push(['Hodim ID', 'Hodim nomi', 'Holat', 'Izoh', 'Jarima', 'Sana']);
       
-      // Ma'lumotlar qatorlari
-      absentData.employees.forEach(emp => {
+      // Ma'lumotlar qatorlari (sorted alphabetically)
+      const sortedEmployees = [...absentData.employees].sort((a, b) => 
+        a.employee_name.localeCompare(b.employee_name, 'en', { sensitivity: 'base' })
+      );
+      
+      sortedEmployees.forEach(emp => {
         csvData.push([
           emp.employee_id,
           emp.employee_name,
@@ -481,10 +493,15 @@ const Absence = () => {
     });
   };
 
-  const filteredResults = monthlyReport?.results.filter(emp => 
-    emp.employee_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.employee_id.toString().includes(searchQuery)
-  ) || [];
+  // Filter and sort results alphabetically
+  const filteredResults = monthlyReport?.results
+    .filter(emp => 
+      emp.employee_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.employee_id.toString().includes(searchQuery)
+    )
+    .sort((a, b) => 
+      a.employee_name.localeCompare(b.employee_name, 'en', { sensitivity: 'base' })
+    ) || [];
 
   const getMonthLabel = () => {
     const month = months.find(m => m.value === selectedMonth);
@@ -696,7 +713,7 @@ const Absence = () => {
                   </Card>
                 </div>
 
-                {/* Employees Table */}
+                {/* Employees Table - Sorted Alphabetically */}
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   <Table>
                     <TableHeader className="bg-gray-50 dark:bg-gray-900">
@@ -709,7 +726,11 @@ const Absence = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {absentData.employees.map((employee) => (
+                      {[...absentData.employees]
+                        .sort((a, b) => 
+                          a.employee_name.localeCompare(b.employee_name, 'en', { sensitivity: 'base' })
+                        )
+                        .map((employee) => (
                         <TableRow key={`${employee.employee_id}-${employee.date}`} 
                                 className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                           <TableCell>
@@ -825,7 +846,7 @@ const Absence = () => {
                   </Select>
                 </div>
 
-                {/* Employee Filter */}
+                {/* Employee Filter - Sorted Alphabetically */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -919,7 +940,7 @@ const Absence = () => {
             </div>
           )}
 
-          {/* Main Report Table */}
+          {/* Main Report Table - Sorted Alphabetically */}
           <Card className="border-gray-200 dark:border-gray-700">
             <CardHeader>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

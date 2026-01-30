@@ -836,11 +836,7 @@ const handleRefresh = async () => {
                             <span className="font-medium block">
                               {employee.name || "Noma'lum"}
                             </span>
-                            {employee.employee_no && (
-                              <span className="text-xs text-gray-500">
-                                {employee.employee_no}
-                              </span>
-                            )}
+                            
                           </div>
                         </div>
                       </TableCell>
