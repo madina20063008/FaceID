@@ -1,7 +1,7 @@
 import { Branch, BreakTime, CreateBranchRequest, CreateBreakTimeRequest, CreateDayOffRequest, CreateEmployeeRequest, CreatePlanRequest, CreateShiftRequest, CreateSubscriptionRequest, CreateTelegramChannelRequest, CreateWorkDayRequest, DailyAttendance, DayOff, Device, DeviceResponse, Employee, EmployeeHistory, EventSyncResponse, LoginRequest, LoginResponse, Notification, PaginatedResponse, Plan, RefreshTokenResponse, Shift, Subscription, TelegramChannel, UpdateBranchRequest, UpdateBreakTimeRequest, UpdateDayOffRequest, UpdatePlanRequest, UpdateShiftRequest, UpdateTelegramChannelRequest, UpdateWorkDayRequest, User, WorkDay } from "./types";
 
 // lib/api.ts - COMPLETE WITH ALL FIXES
-const BASE_URL = 'https://hikvision.ugku.uz';
+const BASE_URL = 'https://api.timepro.uz';
 
 export const WEEK_DAYS = [
   { value: 'mon', label: 'Dushanba' },
