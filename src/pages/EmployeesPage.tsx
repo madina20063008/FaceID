@@ -249,99 +249,99 @@ export function EmployeesPage() {
   };
 
   // Refresh employees with sync functionality
-const handleRefresh = async () => {
-  try {
-    // Check if branch is selected
-    if (!currentBranch) {
-      toast.error("Iltimos, filial tanlang");
-      return;
-    }
+  const handleRefresh = async () => {
+    try {
+      // Check if branch is selected
+      if (!currentBranch) {
+        toast.error("Iltimos, filial tanlang");
+        return;
+      }
 
-    setIsRefreshing(true);
+      setIsRefreshing(true);
 
-    if (useMockData) {
-      // In mock mode, just fetch employees
-      await fetchEmployees();
-      toast.success("Hodimlar ro'yxati yangilandi (namuna rejim)");
-    } else {
-      try {
-        // Step 1: Sync employees with devices
-        const syncResult = await apiService.syncEmployees();
-
-        if (syncResult.success) {
-          let successMessage = `Hodimlar sinxronizatsiya qilindi`;
-
-          // Add sync statistics to the message
-          const statsMessages = [];
-          if (syncResult.synced_devices > 0) {
-            statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
-          }
-          if (syncResult.added > 0) {
-            statsMessages.push(
-              `${syncResult.added} ta yangi hodim qo'shildi`,
-            );
-          }
-          if (syncResult.deleted > 0) {
-            statsMessages.push(`${syncResult.deleted} ta hodim o'chirildi`);
-          }
-
-          if (statsMessages.length > 0) {
-            successMessage += `: ${statsMessages.join(", ")}`;
-          }
-
-          toast.success(successMessage);
-        } else {
-          toast.warning(
-            "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
-          );
-        }
-
-        // Step 2: Fetch updated employees list
+      if (useMockData) {
+        // In mock mode, just fetch employees
         await fetchEmployees();
-      } catch (syncError: any) {
-        console.error("❌ Sync failed:", syncError);
-        
-        // Special handling for branch not selected error
-        if (syncError.message.includes('Filial tanlanmagan')) {
-          toast.error(syncError.message);
-        } else {
-          // Try to fetch employees even if sync fails
-          try {
-            await fetchEmployees();
+        toast.success("Hodimlar ro'yxati yangilandi (namuna rejim)");
+      } else {
+        try {
+          // Step 1: Sync employees with devices
+          const syncResult = await apiService.syncEmployees();
+
+          if (syncResult.success) {
+            let successMessage = `Hodimlar sinxronizatsiya qilindi`;
+
+            // Add sync statistics to the message
+            const statsMessages = [];
+            if (syncResult.synced_devices > 0) {
+              statsMessages.push(`${syncResult.synced_devices} ta qurilma`);
+            }
+            if (syncResult.added > 0) {
+              statsMessages.push(
+                `${syncResult.added} ta yangi hodim qo'shildi`,
+              );
+            }
+            if (syncResult.deleted > 0) {
+              statsMessages.push(`${syncResult.deleted} ta hodim o'chirildi`);
+            }
+
+            if (statsMessages.length > 0) {
+              successMessage += `: ${statsMessages.join(", ")}`;
+            }
+
+            toast.success(successMessage);
+          } else {
             toast.warning(
-              "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi",
+              "Sinxronizatsiya amalga oshirildi, lekin natija muvaffaqiyatli emas",
             );
-          } catch (fetchError) {
-            toast.error("Ikkala operatsiya ham amalga oshirilmadi");
-            throw syncError; // Re-throw the original error
+          }
+
+          // Step 2: Fetch updated employees list
+          await fetchEmployees();
+        } catch (syncError: any) {
+          console.error("❌ Sync failed:", syncError);
+          
+          // Special handling for branch not selected error
+          if (syncError.message.includes('Filial tanlanmagan')) {
+            toast.error(syncError.message);
+          } else {
+            // Try to fetch employees even if sync fails
+            try {
+              await fetchEmployees();
+              toast.warning(
+                "Sinxronizatsiya amalga oshirilmadi, lekin ma'lumotlar yuklandi",
+              );
+            } catch (fetchError) {
+              toast.error("Ikkala operatsiya ham amalga oshirilmadi");
+              throw syncError; // Re-throw the original error
+            }
           }
         }
       }
-    }
-  } catch (error: any) {
-    console.error("❌ Refresh failed:", error);
+    } catch (error: any) {
+      console.error("❌ Refresh failed:", error);
 
-    // User-friendly error messages
-    if (error.message.includes("Failed to fetch")) {
-      toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
-    } else if (error.status === 401) {
-      toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
-    } else if (error.status === 403) {
-      toast.error("Bu amalni bajarish uchun ruxsat yo'q");
-    } else {
-      toast.error(error.message || "Yangilashda xatolik yuz berdi");
+      // User-friendly error messages
+      if (error.message.includes("Failed to fetch")) {
+        toast.error("Internet aloqasi yo'q yoki server ishlamayapti");
+      } else if (error.status === 401) {
+        toast.error("Kirish huquqi yo'q. Iltimos, qaytadan kiring");
+      } else if (error.status === 403) {
+        toast.error("Bu amalni bajarish uchun ruxsat yo'q");
+      } else {
+        toast.error(error.message || "Yangilashda xatolik yuz berdi");
+      }
+    } finally {
+      setIsRefreshing(false);
     }
-  } finally {
-    setIsRefreshing(false);
-  }
-};
+  };
 
   // Create new employee
   const handleCreate = async () => {
     try {
-      // Format phone number
+      // Format phone number if provided
       let phoneNumber = formData.phone_number;
-      if (phoneNumber && !phoneNumber.startsWith("+998")) {
+      if (phoneNumber && phoneNumber.trim() && !phoneNumber.startsWith("+998")) {
         const cleanPhone = phoneNumber.replace(/\D/g, "");
         if (cleanPhone.length === 9) {
           phoneNumber = "+998" + cleanPhone;
@@ -359,12 +359,12 @@ const handleRefresh = async () => {
               : 1,
           employee_no: formData.employee_no || `EMP${Date.now()}`,
           name: formData.name,
-          position: formData.position,
-          phone_number: phoneNumber,
+          position: formData.position || "",
+          phone_number: phoneNumber || "",
           local_face:
             "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-          description: formData.description,
-          salary: formData.salary,
+          description: formData.description || "",
+          salary: formData.salary || 0,
           device: formData.device_id,
           shift: formData.shift,
           work_day: formData.work_day,
@@ -377,27 +377,26 @@ const handleRefresh = async () => {
         // Set branch from current branch
         const branchData = currentBranch ? { branch: currentBranch.id } : {};
         
-        // Prepare employee data - DO NOT include employee_no
+        // Prepare employee data - only include fields that have values
         const employeeData: CreateEmployeeRequest = {
-          device_id: formData.device_id,
-          name: formData.name,
-          user_type: formData.user_type,
-          begin_time: formData.begin_time,
-          end_time: formData.end_time,
-          door_right: formData.door_right,
-          employment: formData.employment || "", // Ensure empty string, not undefined
-          department: formData.department,
-          position: formData.position || "", // Ensure empty string, not undefined
+          name: formData.name, // Only required field
+          device_id: formData.device_id || 1,
+          user_type: formData.user_type || "normal",
+          begin_time: formData.begin_time || new Date().toISOString(),
+          end_time: formData.end_time || new Date().toISOString(),
+          door_right: formData.door_right || "1",
+          employment: formData.employment || "",
+          department: formData.department || null,
+          position: formData.position || "",
           shift: formData.shift || null,
-          description: formData.description || "", // Ensure empty string, not undefined
-          phone_number: phoneNumber,
-          salary: formData.salary || 0, // Ensure 0 if undefined
-          break_time: formData.break_time,
+          description: formData.description || "",
+          phone_number: phoneNumber || "",
+          salary: formData.salary || 0,
+          break_time: formData.break_time || null,
           work_day: formData.work_day || null,
-          fine: formData.fine || 0, // Ensure 0 if undefined
+          fine: formData.fine || 0,
           day_off: formData.day_off || null,
-          ...branchData, // Add current branch
-          // ❌ DO NOT include employee_no - API will generate it
+          ...branchData,
         };
 
         try {
@@ -415,7 +414,7 @@ const handleRefresh = async () => {
             toast.error(`Xato: Noto'g'ri ID (${apiError.message})`);
           } else if (apiError.status === 400) {
             toast.error(
-              "Noto'g'ri ma'lumotlar. Barcha majburiy maydonlarni to'ldiring.",
+              "Noto'g'ri ma'lumotlar. Ism maydonini to'ldiring.",
             );
           } else {
             toast.error(
@@ -432,7 +431,6 @@ const handleRefresh = async () => {
       await fetchEmployees(); // Refresh list
     } catch (error: any) {
       console.error("Failed to create employee:", error);
-      // Don't show toast here since we already showed it in the API error catch
     }
   };
 
@@ -441,9 +439,9 @@ const handleRefresh = async () => {
     if (!editEmployee) return;
 
     try {
-      // Format phone number
+      // Format phone number if provided
       let phoneNumber = formData.phone_number;
-      if (phoneNumber && !phoneNumber.startsWith("+998")) {
+      if (phoneNumber && phoneNumber.trim() && !phoneNumber.startsWith("+998")) {
         const cleanPhone = phoneNumber.replace(/\D/g, "");
         if (cleanPhone.length === 9) {
           phoneNumber = "+998" + cleanPhone;
@@ -460,41 +458,40 @@ const handleRefresh = async () => {
               ? {
                   ...emp,
                   name: formData.name,
-                  position: formData.position,
-                  phone_number: phoneNumber,
+                  position: formData.position || emp.position,
+                  phone_number: phoneNumber || emp.phone_number,
                   employee_no: formData.employee_no || emp.employee_no,
-                  description: formData.description,
-                  salary: formData.salary,
-                  shift: formData.shift,
-                  work_day: formData.work_day,
-                  day_off: formData.day_off,
+                  description: formData.description || emp.description,
+                  salary: formData.salary || emp.salary,
+                  shift: formData.shift || emp.shift,
+                  work_day: formData.work_day || emp.work_day,
+                  day_off: formData.day_off || emp.day_off,
                 }
               : emp,
           ),
         );
         toast.success("Hodim yangilandi (namuna rejim)");
       } else {
-        // Prepare update data - DO NOT include employee_no
+        // Prepare update data - only include fields that have values
         const updateData: Partial<CreateEmployeeRequest> = {
-          device_id: formData.device_id,
-          name: formData.name,
-          user_type: formData.user_type,
-          begin_time: formData.begin_time,
-          end_time: formData.end_time,
-          door_right: formData.door_right,
-          employment: formData.employment || "",
-          department: formData.department,
-          position: formData.position || "",
-          shift: formData.shift || null,
-          description: formData.description || "",
-          phone_number: phoneNumber,
-          salary: formData.salary || 0,
-          break_time: formData.break_time,
-          work_day: formData.work_day || null,
-          branch: currentBranch?.id || null, // Add current branch
-          fine: formData.fine || 0,
-          day_off: formData.day_off || null,
-          // ❌ DO NOT include employee_no in updates
+          name: formData.name, // Only required field
+          device_id: formData.device_id || editEmployee.device || 1,
+          user_type: formData.user_type || editEmployee.user_type || "normal",
+          begin_time: formData.begin_time || editEmployee.begin_time || new Date().toISOString(),
+          end_time: formData.end_time || editEmployee.end_time || new Date().toISOString(),
+          door_right: formData.door_right || editEmployee.door_right || "1",
+          employment: formData.employment || editEmployee.employment || "",
+          department: formData.department || editEmployee.department || null,
+          position: formData.position || editEmployee.position || "",
+          shift: formData.shift || editEmployee.shift || null,
+          description: formData.description || editEmployee.description || "",
+          phone_number: phoneNumber || editEmployee.phone_number || "",
+          salary: formData.salary || editEmployee.salary || 0,
+          break_time: formData.break_time || editEmployee.break_time || null,
+          work_day: formData.work_day || editEmployee.work_day || null,
+          branch: currentBranch?.id || editEmployee.branch || null,
+          fine: formData.fine || editEmployee.fine || 0,
+          day_off: formData.day_off || editEmployee.day_off || null,
         };
 
         await apiService.updateEmployee(editEmployee.id, updateData);
@@ -545,7 +542,6 @@ const handleRefresh = async () => {
         name: employee.name || "",
         position: employee.position || "",
         phone_number: employee.phone_number || "",
-        // ❌ Don't load employee_no into form for editing
         description: employee.description || "",
         salary: employee.salary || 0,
         device_id: employee.device || 1,
@@ -558,7 +554,7 @@ const handleRefresh = async () => {
         shift: employee.shift || null,
         break_time: employee.break_time || null,
         work_day: employee.work_day || null,
-        branch: employee.branch || currentBranch?.id || null, // Set current branch
+        branch: employee.branch || currentBranch?.id || null,
         fine: employee.fine || 0,
         day_off: employee.day_off || null,
       };
@@ -580,7 +576,6 @@ const handleRefresh = async () => {
         setIsViewLoading(false);
       } else {
         // Fetch detailed employee data from API
-
         try {
           const detailedEmployee = await apiService.getEmployeeById(
             employee.id,
@@ -618,7 +613,7 @@ const handleRefresh = async () => {
       shift: null,
       break_time: null,
       work_day: null,
-      branch: currentBranch?.id || null, // Set current branch
+      branch: currentBranch?.id || null,
       fine: 0,
       day_off: null,
     });
@@ -752,7 +747,6 @@ const handleRefresh = async () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Hodimlar ro'yxati</CardTitle>
-        
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -900,13 +894,17 @@ const handleRefresh = async () => {
             <DialogTitle>
               {editEmployee ? "Hodimni tahrirlash" : "Yangi hodim qo'shish"}
             </DialogTitle>
-            
+            <DialogDescription>
+              {editEmployee 
+                ? "Hodim ma'lumotlarini tahrirlang. Faqat ism maydoni majburiy." 
+                : "Yangi hodim qo'shing. Faqat ism maydoni majburiy, boshqa maydonlar ixtiyoriy."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            
-            
             <div className="space-y-2">
-              <Label htmlFor="name">Ism familiya *</Label>
+              <Label htmlFor="name">
+                Ism familiya <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -919,7 +917,7 @@ const handleRefresh = async () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="position">Lavozim *</Label>
+              <Label htmlFor="position">Lavozim</Label>
               <Input
                 id="position"
                 value={formData.position}
@@ -927,12 +925,11 @@ const handleRefresh = async () => {
                   setFormData({ ...formData, position: e.target.value })
                 }
                 placeholder="Frontend Developer"
-                required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="phone_number">Telefon raqami *</Label>
+              <Label htmlFor="phone_number">Telefon raqami</Label>
               <Input
                 id="phone_number"
                 type="tel"
@@ -941,7 +938,6 @@ const handleRefresh = async () => {
                   setFormData({ ...formData, phone_number: e.target.value })
                 }
                 placeholder="+998 90 123 45 67"
-                required
               />
             </div>
             
@@ -1069,12 +1065,7 @@ const handleRefresh = async () => {
             </Button>
             <Button
               onClick={editEmployee ? handleUpdate : handleCreate}
-              disabled={
-                !formData.name || 
-                !formData.position || 
-                !formData.phone_number ||
-                !currentBranch
-              }
+              disabled={!formData.name.trim() || !currentBranch}
               title={!currentBranch ? "Iltimos, filial tanlang" : ""}
             >
               {editEmployee ? "Saqlash" : "Qo'shish"}
@@ -1116,7 +1107,7 @@ const handleRefresh = async () => {
                     {viewEmployee.name || "Noma'lum"}
                   </h3>
                   <p className="text-gray-500 dark:text-gray-400">
-                    {viewEmployee.position || "N/A"}
+                    {viewEmployee.position || "Lavozim ko'rsatilmagan"}
                   </p>
                   {viewEmployee.id && (
                     <p className="text-sm text-gray-500">
