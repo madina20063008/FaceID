@@ -349,6 +349,8 @@ export function Layout({ children }: LayoutProps) {
                     ? "Superadmin"
                     : user?.role === "a"
                     ? "Admin"
+                    : user?.role === "m"
+                    ? "Mahalla"
                     : "Admin"}
                 </p>
               </div>

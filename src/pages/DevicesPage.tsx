@@ -351,11 +351,7 @@ export function DevicesPage() {
           <h1 className="text-3xl font-bold tracking-tight">Qurilmalar</h1>
           <p className="text-gray-500 dark:text-gray-400">
             Kuzatuv qurilmalari va kameralarni boshqarish
-            {currentUser && (
-              <Badge variant="outline" className="ml-2">
-                {currentUser.role === 'superadmin' ? 'Superadmin' : 'Admin'}
-              </Badge>
-            )}
+            
             {useMockData && (
               <Badge variant="secondary" className="ml-2">
                 <AlertCircle className="w-3 h-3 mr-1" />

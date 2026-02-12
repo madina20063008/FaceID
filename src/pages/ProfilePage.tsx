@@ -263,7 +263,7 @@ export function ProfilePage() {
                   <div className="mt-6">
                     <h2 className="text-2xl font-bold">{user.full_name}</h2>
                     <Badge className={`mt-2 px-4 py-1.5 text-sm font-semibold ${getRoleBadgeColor()} border-0`}>
-                      {user.role === 'a' ? 'Administrator' : user.role === 'm' ? 'Menejer' : 'Foydalanuvchi'}
+                      {user.role === 'a' ? 'Administrator' : user.role === 'm' ? 'Mahalla' : user.role === 's' ? 'SuperAdmin' : 'Foydalanuvchi'}
                     </Badge>
                   </div>
 
