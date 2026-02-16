@@ -244,7 +244,7 @@ export function Layout({ children }: LayoutProps) {
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div className="flex-1">
-                <h1 className="font-bold text-lg">TimePay</h1>
+                <h1 className="font-bold text-lg">TimePro</h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Boshqaruv tizimi
                 </p>

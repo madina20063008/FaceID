@@ -370,7 +370,7 @@ export function LoginPage() {
               <Building2 className="h-10 w-10 text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl">TimePay CRM</CardTitle>
+          <CardTitle className="text-3xl">TimePro CRM</CardTitle>
           <CardDescription className="text-base">
             FaceID Attendance & Payroll System
           </CardDescription>

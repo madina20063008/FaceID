@@ -1,28 +1,33 @@
-import { useAuth } from '../contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '../app/components/ui/card';
-import { Avatar, AvatarFallback } from '../app/components/ui/avatar';
-import { Badge } from '../app/components/ui/badge';
-import { Button } from '../app/components/ui/button';
-import { 
-  Building2, 
-  Phone, 
-  Shield, 
-  LogOut, 
-  Calendar, 
-  CreditCard, 
-  CheckCircle, 
+import { useAuth } from "../contexts/AuthContext";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../app/components/ui/card";
+import { Avatar, AvatarFallback } from "../app/components/ui/avatar";
+import { Badge } from "../app/components/ui/badge";
+import { Button } from "../app/components/ui/button";
+import {
+  Building2,
+  Phone,
+  Shield,
+  LogOut,
+  Calendar,
+  CreditCard,
+  CheckCircle,
   XCircle,
   Clock,
   Crown,
   TrendingUp,
   Bell,
   AlertCircle,
-  RefreshCw
-} from 'lucide-react';
-import { Progress } from '../app/components/ui/progress';
-import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { apiService } from '../lib/api';
+  RefreshCw,
+} from "lucide-react";
+import { Progress } from "../app/components/ui/progress";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { apiService } from "../lib/api";
 
 // Local Notification interface - API response formatiga mos
 interface LocalNotification {
@@ -52,56 +57,58 @@ export function ProfilePage() {
     try {
       setLoading(true);
       const data = await apiService.getNotifications();
-      
+
       // API response'ni LocalNotification formatiga convert qilish
-      const formattedNotifications: LocalNotification[] = data.map((item: any) => ({
-        id: item.id || 0,
-        user: item.user || user.id,
-        text: item.text || item.message || 'Noma\'lum xabar',
-        created_at: item.created_at || new Date().toISOString(),
-        is_read: item.is_read || false,
-        ...item
-      }));
-      
+      const formattedNotifications: LocalNotification[] = data.map(
+        (item: any) => ({
+          id: item.id || 0,
+          user: item.user || user.id,
+          text: item.text || item.message || "Noma'lum xabar",
+          created_at: item.created_at || new Date().toISOString(),
+          is_read: item.is_read || false,
+          ...item,
+        }),
+      );
+
       setNotifications(formattedNotifications);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      console.error("Failed to load notifications:", error);
       // Mock data for testing
       setNotifications([
         {
           id: 1,
           user: user.id,
-          text: 'Profil yangilandi: Sizning ma\'lumotlaringiz muvaffaqiyatli saqlandi',
+          text: "Profil yangilandi: Sizning ma'lumotlaringiz muvaffaqiyatli saqlandi",
           created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-          is_read: false
+          is_read: false,
         },
         {
           id: 2,
           user: user.id,
-          text: 'Obuna eslatmasi: Sizning obunangiz 5 kundan keyin tugaydi',
+          text: "Obuna eslatmasi: Sizning obunangiz 5 kundan keyin tugaydi",
           created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          is_read: true
+          is_read: true,
         },
         {
           id: 3,
           user: user.id,
-          text: 'Xavfsizlik: Hisobingizga yangi qurilmadan kirish aniqlandi',
+          text: "Xavfsizlik: Hisobingizga yangi qurilmadan kirish aniqlandi",
           created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          is_read: false
+          is_read: false,
         },
         {
           id: 4,
           user: user.id,
-          text: 'Hodim qo\'shildi: Ali Karimov hodimlar ro\'yxatiga qo\'shildi',
+          text: "Hodim qo'shildi: Ali Karimov hodimlar ro'yxatiga qo'shildi",
           created_at: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-          is_read: true
+          is_read: true,
         },
         {
           id: 5,
           user: user.id,
-          text: 'To\'lov muvaffaqiyatli: Obuna uchun to\'lov qabul qilindi',
+          text: "To'lov muvaffaqiyatli: Obuna uchun to'lov qabul qilindi",
           created_at: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
-          is_read: true
+          is_read: true,
         },
       ]);
     } finally {
@@ -114,44 +121,46 @@ export function ProfilePage() {
     try {
       // Agar API da bu metod bo'lsa, undan foydalaning
       // await apiService.markNotificationAsRead(notificationId);
-      
+
       // Hozircha local o'zgartirish
-      setNotifications(notifications.map(n => 
-        n.id === notificationId ? { ...n, is_read: true } : n
-      ));
+      setNotifications(
+        notifications.map((n) =>
+          n.id === notificationId ? { ...n, is_read: true } : n,
+        ),
+      );
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error("Failed to mark notification as read:", error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
       // await apiService.markAllNotificationsAsRead(user.id);
-      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
+      setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      console.error("Failed to mark all notifications as read:", error);
     }
   };
 
   const deleteNotification = async (notificationId: number) => {
     try {
       // await apiService.deleteNotification(notificationId);
-      setNotifications(notifications.filter(n => n.id !== notificationId));
+      setNotifications(notifications.filter((n) => n.id !== notificationId));
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      console.error("Failed to delete notification:", error);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uz-UZ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("uz-UZ", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -171,9 +180,9 @@ export function ProfilePage() {
     } else if (diffDays < 7) {
       return `${diffDays} kun oldin`;
     } else {
-      return date.toLocaleDateString('uz-UZ', {
-        month: 'short',
-        day: 'numeric'
+      return date.toLocaleDateString("uz-UZ", {
+        month: "short",
+        day: "numeric",
       });
     }
   };
@@ -181,14 +190,14 @@ export function ProfilePage() {
   // Calculate subscription progress
   const calculateSubscriptionProgress = () => {
     if (!user.subscription) return 0;
-    
+
     const start = new Date(user.subscription.start_date).getTime();
     const end = new Date(user.subscription.end_date).getTime();
     const now = new Date().getTime();
-    
+
     if (now >= end) return 100;
     if (now <= start) return 0;
-    
+
     const total = end - start;
     const elapsed = now - start;
     return Math.min(100, Math.round((elapsed / total) * 100));
@@ -196,26 +205,33 @@ export function ProfilePage() {
 
   // Get role badge color
   const getRoleBadgeColor = () => {
-    switch(user.role) {
-      case 'a': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-      case 'm': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    switch (user.role) {
+      case "a":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "m":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
   };
 
   // Get subscription badge color
   const getSubscriptionBadgeColor = () => {
-    switch(user.subscription?.plan_type) {
-      case 'plus': return 'from-blue-500 to-indigo-600';
-      case 'premium': return 'from-purple-500 to-pink-600';
-      case 'enterprise': return 'from-amber-500 to-orange-600';
-      default: return 'from-gray-500 to-gray-700';
+    switch (user.subscription?.plan_type) {
+      case "plus":
+        return "from-blue-500 to-indigo-600";
+      case "premium":
+        return "from-purple-500 to-pink-600";
+      case "enterprise":
+        return "from-amber-500 to-orange-600";
+      default:
+        return "from-gray-500 to-gray-700";
     }
   };
 
   // Handle subscription button click
   const handleSubscriptionClick = () => {
-    navigate('/plans');
+    navigate("/plans");
   };
 
   return (
@@ -234,7 +250,7 @@ export function ProfilePage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-sm">
               <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium">TimePay CRM</span>
+              <span className="font-medium"> CRM</span>
             </div>
           </div>
         </div>
@@ -254,16 +270,26 @@ export function ProfilePage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="absolute -bottom-2 -right-2">
-                      <div className={`p-3 rounded-full shadow-lg ${getRoleBadgeColor()}`}>
+                      <div
+                        className={`p-3 rounded-full shadow-lg ${getRoleBadgeColor()}`}
+                      >
                         <Crown className="h-5 w-5" />
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6">
                     <h2 className="text-2xl font-bold">{user.full_name}</h2>
-                    <Badge className={`mt-2 px-4 py-1.5 text-sm font-semibold ${getRoleBadgeColor()} border-0`}>
-                      {user.role === 'a' ? 'Administrator' : user.role === 'm' ? 'Mahalla' : user.role === 's' ? 'SuperAdmin' : 'Foydalanuvchi'}
+                    <Badge
+                      className={`mt-2 px-4 py-1.5 text-sm font-semibold ${getRoleBadgeColor()} border-0`}
+                    >
+                      {user.role === "a"
+                        ? "Administrator"
+                        : user.role === "m"
+                          ? "Mahalla"
+                          : user.role === "s"
+                            ? "SuperAdmin"
+                            : "Foydalanuvchi"}
                     </Badge>
                   </div>
 
@@ -274,11 +300,15 @@ export function ProfilePage() {
                           <Shield className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Hisob holati</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Hisob holati
+                          </p>
                           <div className="flex items-center gap-2">
-                            <div className={`h-2 w-2 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <div
+                              className={`h-2 w-2 rounded-full ${user.is_active ? "bg-green-500" : "bg-red-500"}`}
+                            ></div>
                             <p className="font-semibold">
-                              {user.is_active ? 'Faol' : 'Nofaol'}
+                              {user.is_active ? "Faol" : "Nofaol"}
                             </p>
                           </div>
                         </div>
@@ -288,7 +318,6 @@ export function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
-
           </div>
 
           {/* Right Column - Details */}
@@ -308,21 +337,27 @@ export function ProfilePage() {
                       <Phone className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Telefon raqami</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Telefon raqami
+                      </p>
                       <p className="text-lg font-bold">{user.phone_number}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
                       <TrendingUp className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Holati</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Holati
+                      </p>
                       <div className="flex items-center gap-2">
-                        <div className={`h-3 w-3 rounded-full ${user.is_active ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                        <div
+                          className={`h-3 w-3 rounded-full ${user.is_active ? "bg-green-500 animate-pulse" : "bg-red-500"}`}
+                        ></div>
                         <p className="text-lg font-bold">
-                          {user.is_active ? 'Faol' : 'Nofaol'}
+                          {user.is_active ? "Faol" : "Nofaol"}
                         </p>
                       </div>
                     </div>
@@ -345,7 +380,6 @@ export function ProfilePage() {
                       </Badge>
                     )}
                   </CardTitle>
-                  
                 </div>
               </CardHeader>
               <CardContent>
@@ -369,45 +403,55 @@ export function ProfilePage() {
                       <div
                         key={notification.id}
                         className={`p-4 rounded-xl border transition-all ${
-                          notification.is_read 
-                            ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' 
-                            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                          notification.is_read
+                            ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                            : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"
                         }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3 flex-1">
-                            <div className={`p-2 rounded-lg ${
-                              notification.is_read 
-                                ? 'bg-gray-100 dark:bg-gray-700' 
-                                : 'bg-blue-100 dark:bg-blue-800'
-                            }`}>
-                              <AlertCircle className={`h-4 w-4 ${
-                                notification.is_read 
-                                  ? 'text-gray-600 dark:text-gray-400' 
-                                  : 'text-blue-600 dark:text-blue-400'
-                              }`} />
+                            <div
+                              className={`p-2 rounded-lg ${
+                                notification.is_read
+                                  ? "bg-gray-100 dark:bg-gray-700"
+                                  : "bg-blue-100 dark:bg-blue-800"
+                              }`}
+                            >
+                              <AlertCircle
+                                className={`h-4 w-4 ${
+                                  notification.is_read
+                                    ? "text-gray-600 dark:text-gray-400"
+                                    : "text-blue-600 dark:text-blue-400"
+                                }`}
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`font-medium ${
-                                notification.is_read 
-                                  ? 'text-gray-700 dark:text-gray-300' 
-                                  : 'text-gray-900 dark:text-gray-100'
-                              }`}>
+                              <p
+                                className={`font-medium ${
+                                  notification.is_read
+                                    ? "text-gray-700 dark:text-gray-300"
+                                    : "text-gray-900 dark:text-gray-100"
+                                }`}
+                              >
                                 {notification.text}
                               </p>
                               <div className="flex items-center gap-3 mt-2">
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {formatNotificationDate(notification.created_at)}
+                                  {formatNotificationDate(
+                                    notification.created_at,
+                                  )}
                                 </span>
                                 {!notification.is_read && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
                                     Yangi
                                   </Badge>
                                 )}
                               </div>
                             </div>
                           </div>
-                         
                         </div>
                       </div>
                     ))}
@@ -420,15 +464,22 @@ export function ProfilePage() {
             {user.subscription && (
               <>
                 <Card className="border-0 shadow-lg overflow-hidden">
-                  <div className={`h-2 bg-gradient-to-r ${getSubscriptionBadgeColor()}`}></div>
+                  <div
+                    className={`h-2 bg-gradient-to-r ${getSubscriptionBadgeColor()}`}
+                  ></div>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
                         <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         Obuna tafsilotlari
                       </CardTitle>
-                      <Badge variant="outline" className="text-sm font-semibold">
-                        {user.subscription.billing_cycle === 'monthly' ? '💳 Oylik' : '📅 Yillik'}
+                      <Badge
+                        variant="outline"
+                        className="text-sm font-semibold"
+                      >
+                        {user.subscription.billing_cycle === "monthly"
+                          ? "💳 Oylik"
+                          : "📅 Yillik"}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -440,14 +491,20 @@ export function ProfilePage() {
                             <Crown className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Reja nomi</p>
-                            <p className="text-xl font-bold">{user.subscription.plan_title}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Reja nomi
+                            </p>
+                            <p className="text-xl font-bold">
+                              {user.subscription.plan_title}
+                            </p>
                           </div>
                         </div>
-                        <Badge 
-                          className={`${user.subscription.is_paid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'}`}
+                        <Badge
+                          className={`${user.subscription.is_paid ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"}`}
                         >
-                          {user.subscription.is_paid ? '✅ To\'langan' : '❌ To\'lanmagan'}
+                          {user.subscription.is_paid
+                            ? "✅ To'langan"
+                            : "❌ To'lanmagan"}
                         </Badge>
                       </div>
 
@@ -457,8 +514,12 @@ export function ProfilePage() {
                             <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Boshlanish vaqti</p>
-                            <p className="font-semibold">{formatDate(user.subscription.start_date)}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Boshlanish vaqti
+                            </p>
+                            <p className="font-semibold">
+                              {formatDate(user.subscription.start_date)}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -469,8 +530,12 @@ export function ProfilePage() {
                             <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Tugash vaqti</p>
-                            <p className="font-semibold">{formatDate(user.subscription.end_date)}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              Tugash vaqti
+                            </p>
+                            <p className="font-semibold">
+                              {formatDate(user.subscription.end_date)}
+                            </p>
                           </div>
                         </div>
                         <div className="mt-3">
@@ -480,8 +545,8 @@ export function ProfilePage() {
                               {user.subscription.remaining_days} kun
                             </span>
                           </div>
-                          <Progress 
-                            value={calculateSubscriptionProgress()} 
+                          <Progress
+                            value={calculateSubscriptionProgress()}
                             className="h-2"
                           />
                         </div>
@@ -495,7 +560,9 @@ export function ProfilePage() {
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-full ${user.subscription.is_active ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                        <div
+                          className={`p-3 rounded-full ${user.subscription.is_active ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"}`}
+                        >
                           {user.subscription.is_active ? (
                             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                           ) : (
@@ -503,20 +570,26 @@ export function ProfilePage() {
                           )}
                         </div>
                         <div>
-                          <h3 className="text-lg font-semibold">Obuna holati</h3>
+                          <h3 className="text-lg font-semibold">
+                            Obuna holati
+                          </h3>
                           <p className="text-gray-500 dark:text-gray-400">
-                            {user.subscription.is_active 
-                              ? 'Sizning obunangiz faol holatda' 
-                              : 'Sizning obunangiz faol emas'}
+                            {user.subscription.is_active
+                              ? "Sizning obunangiz faol holatda"
+                              : "Sizning obunangiz faol emas"}
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        variant={user.subscription.is_active ? "outline" : "default"}
+                      <Button
+                        variant={
+                          user.subscription.is_active ? "outline" : "default"
+                        }
                         className="whitespace-nowrap"
                         onClick={handleSubscriptionClick}
                       >
-                        {user.subscription.is_active ? 'Obunani yangilash' : 'Obuna sotib olish'}
+                        {user.subscription.is_active
+                          ? "Obunani yangilash"
+                          : "Obuna sotib olish"}
                       </Button>
                     </div>
                   </CardContent>
@@ -534,8 +607,8 @@ export function ProfilePage() {
                       Tizimdan chiqish yoki boshqa amallarni bajarish
                     </p>
                   </div>
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     onClick={logout}
                     className="shadow-lg hover:shadow-xl transition-all"
                   >
